@@ -26,3 +26,4 @@ describe('SdkDiscovery', () => {
     expect(report.lastChecked).toBeDefined();
   });
 });
+

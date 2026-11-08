@@ -27,7 +27,7 @@ export function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(
     vscode.commands.registerCommand('androidDevTools.openDashboard', () => {
       if (dashboardProvider) {
-        dashboardProvider.showOrRevealEditorPanel(context);
+        dashboardProvider.showOrRevealEditorPanel();
       }
     })
   );

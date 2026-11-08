@@ -5,42 +5,53 @@ import { DEFAULT_SETTINGS } from '../../shared/constants';
 import { SdkDiscovery } from '../../core/sdk/sdk-discovery';
 
 export class MessageRouter {
-  private webview: vscode.Webview | null = null;
+  private webviews = new Set<vscode.Webview>();
   private settings: SettingsConfig = { ...DEFAULT_SETTINGS };
+  private onOpenInMainView?: () => void;
 
   constructor(private readonly context: vscode.ExtensionContext) {
     this.loadSettings();
   }
 
+  public setOnOpenInMainView(handler: () => void) {
+    this.onOpenInMainView = handler;
+  }
+
   public attachWebview(webview: vscode.Webview) {
-    this.webview = webview;
-    this.webview.onDidReceiveMessage((message: BridgeMessage) => {
-      this.handleMessage(message);
+    this.webviews.add(webview);
+    webview.onDidReceiveMessage((message: BridgeMessage) => {
+      this.handleMessage(message, webview);
     });
   }
 
-  private async handleMessage(message: BridgeMessage) {
+  private async handleMessage(message: BridgeMessage, senderWebview: vscode.Webview) {
     const { id, type, payload } = message;
 
     try {
       switch (type) {
         case MessageTypes.UI_READY:
-          await this.sendInitialState();
+          await this.sendInitialState(senderWebview);
+          break;
+
+        case MessageTypes.OPEN_IN_MAIN_VIEW:
+          if (this.onOpenInMainView) {
+            this.onOpenInMainView();
+          }
           break;
 
         case MessageTypes.GET_HEALTH_REPORT:
           const report = await this.getSystemHealthReport();
-          this.postResponse(MessageTypes.HEALTH_REPORT, report, id);
+          this.postResponse(MessageTypes.HEALTH_REPORT, report, id, senderWebview);
           break;
 
         case MessageTypes.GET_SETTINGS:
-          this.postResponse(MessageTypes.SETTINGS_DATA, this.settings, id);
+          this.postResponse(MessageTypes.SETTINGS_DATA, this.settings, id, senderWebview);
           break;
 
         case MessageTypes.SAVE_SETTINGS:
           this.settings = payload as SettingsConfig;
           await this.persistSettings();
-          this.postResponse(MessageTypes.SETTINGS_DATA, this.settings, id);
+          this.postMessage(MessageTypes.SETTINGS_DATA, this.settings);
           vscode.window.showInformationMessage('Android Dev Tools settings saved.');
           break;
 
@@ -52,7 +63,7 @@ export class MessageRouter {
             openLabel: 'Select SDK Directory'
           });
           const selectedPath = selectedUri && selectedUri.length > 0 ? selectedUri[0].fsPath : null;
-          this.postResponse(MessageTypes.DIRECTORY_SELECTED, { selectedPath }, id);
+          this.postResponse(MessageTypes.DIRECTORY_SELECTED, { selectedPath }, id, senderWebview);
           break;
 
         case MessageTypes.RUN_AUTO_REPAIR:
@@ -61,23 +72,28 @@ export class MessageRouter {
             issueId: (payload as { issueId: string }).issueId,
             success: true,
             message: 'Auto-repair scheduled.'
-          }, id);
+          }, id, senderWebview);
           break;
 
         default:
           console.warn(`[MessageRouter] Unhandled message type: ${type}`);
-          this.postError(type, 'UNHANDLED_COMMAND', `Command ${type} is not yet implemented.`, id);
+          this.postError(type, 'UNHANDLED_COMMAND', `Command ${type} is not yet implemented.`, id, senderWebview);
       }
     } catch (err: unknown) {
       const errorMessage = err instanceof Error ? err.message : String(err);
-      this.postError(type, 'INTERNAL_ERROR', errorMessage, id);
+      this.postError(type, 'INTERNAL_ERROR', errorMessage, id, senderWebview);
     }
   }
 
-  private async sendInitialState() {
+  private async sendInitialState(targetWebview?: vscode.Webview) {
     const report = await this.getSystemHealthReport();
-    this.postMessage(MessageTypes.HEALTH_REPORT, report);
-    this.postMessage(MessageTypes.SETTINGS_DATA, this.settings);
+    if (targetWebview) {
+      targetWebview.postMessage(createMessage(MessageTypes.HEALTH_REPORT, report));
+      targetWebview.postMessage(createMessage(MessageTypes.SETTINGS_DATA, this.settings));
+    } else {
+      this.postMessage(MessageTypes.HEALTH_REPORT, report);
+      this.postMessage(MessageTypes.SETTINGS_DATA, this.settings);
+    }
   }
 
   private async getSystemHealthReport(): Promise<SystemHealthReport> {
@@ -96,20 +112,33 @@ export class MessageRouter {
   }
 
   public postMessage<T>(type: string, payload?: T) {
-    if (this.webview) {
-      this.webview.postMessage(createMessage(type, payload));
+    const msg = createMessage(type, payload);
+    for (const webview of this.webviews) {
+      try {
+        webview.postMessage(msg);
+      } catch {
+        this.webviews.delete(webview);
+      }
     }
   }
 
-  private postResponse<T>(type: string, payload?: T, id?: string) {
-    if (this.webview) {
-      this.webview.postMessage(createMessage(type, payload, id));
+  private postResponse<T>(type: string, payload?: T, id?: string, senderWebview?: vscode.Webview) {
+    const msg = createMessage(type, payload, id);
+    if (senderWebview) {
+      senderWebview.postMessage(msg);
+    } else {
+      this.postMessage(type, payload);
     }
   }
 
-  private postError(type: string, code: string, message: string, id?: string) {
-    if (this.webview) {
-      this.webview.postMessage(createErrorMessage(type, code, message, id));
+  private postError(type: string, code: string, message: string, id?: string, senderWebview?: vscode.Webview) {
+    const msg = createErrorMessage(type, code, message, id);
+    if (senderWebview) {
+      senderWebview.postMessage(msg);
+    } else {
+      for (const webview of this.webviews) {
+        webview.postMessage(msg);
+      }
     }
   }
 }

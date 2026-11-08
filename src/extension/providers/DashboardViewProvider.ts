@@ -6,11 +6,16 @@ import { MessageRouter } from '../messaging/MessageRouter';
 export class DashboardViewProvider implements vscode.WebviewViewProvider {
   public static readonly viewType = 'androidDevTools.mainView';
   private view?: vscode.WebviewView;
+  private currentPanel?: vscode.WebviewPanel;
 
   constructor(
     private readonly extensionUri: vscode.Uri,
     private readonly messageRouter: MessageRouter
-  ) {}
+  ) {
+    this.messageRouter.setOnOpenInMainView(() => {
+      this.showOrRevealEditorPanel();
+    });
+  }
 
   public resolveWebviewView(
     webviewView: vscode.WebviewView,
@@ -31,7 +36,12 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     webviewView.webview.html = this.getHtmlForWebview(webviewView.webview);
   }
 
-  public showOrRevealEditorPanel(context: vscode.ExtensionContext): vscode.WebviewPanel {
+  public showOrRevealEditorPanel(): vscode.WebviewPanel {
+    if (this.currentPanel) {
+      this.currentPanel.reveal(vscode.ViewColumn.One);
+      return this.currentPanel;
+    }
+
     const panel = vscode.window.createWebviewPanel(
       'androidDevTools.dashboardPanel',
       'Android Dev Tools',
@@ -46,9 +56,15 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       }
     );
 
+    this.currentPanel = panel;
     panel.iconPath = vscode.Uri.joinPath(this.extensionUri, 'resources', 'icons', 'android.svg');
     this.messageRouter.attachWebview(panel.webview);
     panel.webview.html = this.getHtmlForWebview(panel.webview);
+
+    panel.onDidDispose(() => {
+      this.currentPanel = undefined;
+    });
+
     return panel;
   }
 

@@ -33,6 +33,7 @@ export const App: React.FC = () => {
         onSelectTab={setActiveTab}
         status={status}
         issueCount={issueCount}
+        onOpenInMainView={() => postMessage('OPEN_IN_MAIN_VIEW')}
       />
 
       <main className="flex-1 overflow-y-auto">

@@ -39,15 +39,25 @@
     "commands": [
       {
         "command": "androidDevTools.openDashboard",
-        "title": "Open Dashboard",
-        "category": "Android Dev Tools"
+        "title": "Open in Main Editor",
+        "category": "Android Dev Tools",
+        "icon": "$(link-external)"
       },
       {
         "command": "androidDevTools.runDiagnostics",
         "title": "Run Diagnostics",
         "category": "Android Dev Tools"
       }
-    ]
+    ],
+    "menus": {
+      "view/title": [
+        {
+          "command": "androidDevTools.openDashboard",
+          "when": "view == androidDevTools.mainView",
+          "group": "navigation"
+        }
+      ]
+    }
   },
   "scripts": {
     "vscode:prepublish": "npm run build",

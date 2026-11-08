@@ -104,3 +104,4 @@ export class ProcessManager {
     return this.execute('powershell.exe', args, { timeout });
   }
 }
+

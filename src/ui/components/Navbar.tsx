@@ -1,5 +1,5 @@
 import React from 'react';
-import { LayoutDashboard, Wrench, Layers, Coffee, AlertCircle, Settings } from 'lucide-react';
+import { LayoutDashboard, Wrench, Layers, Coffee, AlertCircle, Settings, Maximize2 } from 'lucide-react';
 import { HealthStatus } from '../../shared/types';
 
 export type TabType = 'overview' | 'setup' | 'components' | 'jdk' | 'diagnostics' | 'settings';
@@ -9,9 +9,16 @@ interface NavbarProps {
   onSelectTab: (tab: TabType) => void;
   status?: HealthStatus;
   issueCount?: number;
+  onOpenInMainView?: () => void;
 }
 
-export const Navbar: React.FC<NavbarProps> = ({ activeTab, onSelectTab, status = 'ready', issueCount = 0 }) => {
+export const Navbar: React.FC<NavbarProps> = ({
+  activeTab,
+  onSelectTab,
+  status = 'ready',
+  issueCount = 0,
+  onOpenInMainView
+}) => {
   const tabs = [
     { id: 'overview' as TabType, label: 'Overview', icon: LayoutDashboard },
     { id: 'setup' as TabType, label: 'Setup Manager', icon: Wrench },
@@ -41,9 +48,20 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, onSelectTab, status =
             <span className="ml-1.5 text-[10px] px-1 py-0.2 rounded bg-vscode-badge-bg text-vscode-badge-fg font-mono">v0.1.0</span>
           </div>
         </div>
-        <div className="flex items-center space-x-1.5 text-xs text-vscode-muted">
-          <span className={`w-2 h-2 rounded-full ${getStatusColor()}`}></span>
-          <span className="capitalize text-[11px]">{status}</span>
+        <div className="flex items-center space-x-2">
+          <div className="flex items-center space-x-1.5 text-xs text-vscode-muted">
+            <span className={`w-2 h-2 rounded-full ${getStatusColor()}`}></span>
+            <span className="capitalize text-[11px]">{status}</span>
+          </div>
+          {onOpenInMainView && (
+            <button
+              onClick={onOpenInMainView}
+              className="p-1 rounded hover:bg-vscode-border/40 text-vscode-muted hover:text-vscode-fg transition-colors"
+              title="Open in Main Editor Tab (Full View)"
+            >
+              <Maximize2 className="w-3.5 h-3.5" />
+            </button>
+          )}
         </div>
       </div>
 
