@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+  <!-- Android head -->
+  <path d="M5 16a7 7 0 0 1 14 0Z" />
+  <!-- Eyes -->
+  <circle cx="9" cy="12.5" r="0.75" fill="currentColor" stroke="none" />
+  <circle cx="15" cy="12.5" r="0.75" fill="currentColor" stroke="none" />
+  <!-- Antennas -->
+  <line x1="7.5" y1="8" x2="6" y2="5.5" />
+  <line x1="16.5" y1="8" x2="18" y2="5.5" />
+  <!-- Tool wrench badge in lower corner -->
+  <path d="M14.5 19l2.5 2.5a1.4 1.4 0 0 0 2-2L16.5 17" />
+  <path d="M19 14.5a2.5 2.5 0 0 0-3.5 0l-.5.5 2.5 2.5.5-.5a2.5 2.5 0 0 0 0-3.5z" />
+</svg>
+

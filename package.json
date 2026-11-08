@@ -1,0 +1,83 @@
+{
+  "name": "android-dev-tools",
+  "displayName": "Android Dev Tools",
+  "description": "Simplify Android SDK installation, environment variable configuration, JDK management, and diagnostics in VS Code on Windows.",
+  "version": "0.1.0",
+  "publisher": "android-dev-tools",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Programming Languages",
+    "Other"
+  ],
+  "main": "./dist/extension.js",
+  "activationEvents": [
+    "onView:androidDevTools.mainView",
+    "onCommand:androidDevTools.openDashboard",
+    "onCommand:androidDevTools.runDiagnostics"
+  ],
+  "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "androidDevTools",
+          "title": "Android Dev Tools",
+          "icon": "resources/icons/android.svg"
+        }
+      ]
+    },
+    "views": {
+      "androidDevTools": [
+        {
+          "type": "webview",
+          "id": "androidDevTools.mainView",
+          "name": "Environment Manager"
+        }
+      ]
+    },
+    "commands": [
+      {
+        "command": "androidDevTools.openDashboard",
+        "title": "Open Dashboard",
+        "category": "Android Dev Tools"
+      },
+      {
+        "command": "androidDevTools.runDiagnostics",
+        "title": "Run Diagnostics",
+        "category": "Android Dev Tools"
+      }
+    ]
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run build",
+    "build": "npm run build:extension && npm run build:ui",
+    "build:extension": "node esbuild.js",
+    "build:ui": "vite build",
+    "watch:extension": "node esbuild.js --watch",
+    "watch:ui": "vite build --watch",
+    "watch": "concurrently \"npm run watch:extension\" \"npm run watch:ui\"",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "lucide-react": "^0.378.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@types/node": "^20.12.7",
+    "@types/react": "^18.3.1",
+    "@types/react-dom": "^18.3.1",
+    "@types/vscode": "^1.85.0",
+    "@vitejs/plugin-react": "^4.2.1",
+    "autoprefixer": "^10.4.19",
+    "concurrently": "^8.2.2",
+    "esbuild": "^0.20.2",
+    "postcss": "^8.4.38",
+    "tailwindcss": "^3.4.3",
+    "typescript": "^5.4.5",
+    "vite": "^5.2.11",
+    "vitest": "^1.6.0"
+  }
+}
+

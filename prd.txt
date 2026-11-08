@@ -1,0 +1,925 @@
+Android Dev Tools — Product Requirements & Technical Architecture
+Architecture proposed
+Windows-first
+Phase 1: MVP
+
+Product: Android Dev Tools
+Platform: Windows 10/11
+Primary interface: Visual Studio Code extension
+Initial focus: Android SDK installation, environment configuration, validation and repair
+Future focus: Emulator management, physical-device testing and AI-powered application testing.
+
+My recommendation is to build this as a VS Code extension with a dedicated management interface, backed by a local TypeScript service.
+
+One important architectural decision: we should not implement the Android SDK installation process ourselves. We should build a reliable interface around Google's official Android SDK command-line tools.
+
+That gives us a much better chance of maintaining compatibility with Android development workflows.
+
+1. Product Requirements Document (PRD)
+1.1 Product vision
+Android Dev Tools aims to simplify Android development environment setup and management for developers who prefer working inside AI-powered IDEs.
+
+Currently, developers often have to:
+- Download Android command-line tools manually.
+- Configure SDK directories.
+- Install platform tools and build tools.
+- Accept SDK licenses.
+- Configure environment variables.
+- Install Java and configure its path.
+- Verify ADB connectivity.
+- Troubleshoot missing SDK components.
+- Configure Android emulators.
+Android Dev Tools should centralize these operations into one VS Code experience.
+
+Product philosophy:
+Everything required to prepare, manage and eventually test an Android application should be accessible from one development workspace.
+
+1.2 Target users
+User	Primary need
+Android beginners	Easy SDK installation
+React Native developers	Android environment configuration
+Native Android developers	SDK management
+AI IDE users	Build and test without switching applications
+Experienced developers	Environment validation and repair
+
+1.3 Product objectives
+1. Simplify Android SDK installation.
+2. Eliminate manual environment variable configuration.
+3. Support existing Android installations.
+4. Make installation progress transparent.
+5. Detect missing, outdated and incompatible components.
+6. Provide reliable diagnostic information.
+7. Establish a foundation for integrated Android testing.
+1.4 Scope and release boundaries
+Phase 1 – Environment Manager
+MVP
+
+- SDK installation and management.
+- Directory selection.
+- JDK detection and management.
+- Environment variable configuration.
+- Installation progress.
+- Validation and diagnostics.
+- Repair and update operations.
+
+
+Phase 2 – Device Manager
+- ADB device detection.
+- APK installation.
+- Emulator creation and management.
+- System image installation.
+
+
+Phase 3 – Testing Studio
+- Embedded Android display.
+- Screen interaction.
+- Logcat.
+- Screenshots and recordings.
+- AI-agent testing integration.
+
+
+We should explicitly keep Phase 2 and 3 out of the initial implementation. However, Phase 1 architecture should not prevent them.
+
+2. Phase 1 — Functional requirements
+Module A: Environment Setup Wizard
+The first-time user should see a simple setup wizard.
+
+Step 1 — Welcome
+
+Explain what Android Dev Tools installs and what the user needs.
+
+Step 2 — Installation location
+
+Allow users to choose the root directory.
+
+Examples:
+- C:\Android_Tools
+- D:\Android_Tools
+- E:\Android_Tools
+Default suggestion: C:\Android_Tools, subject to available disk space.
+
+Step 3 — Installation profile
+
+Two profiles:
+Component	Physical device	Full setup
+Command-line tools	Yes	Yes
+Platform tools	Yes	Yes
+Build tools	Yes	Yes
+Android platform	Yes	Yes
+Emulator	No	Yes
+System image	No	Yes
+JDK	User choice	User choice
+
+The user should also be able to customize individual packages.
+
+Step 4 — JDK configuration
+
+Three choices:
+- Detect and use an existing JDK.
+- Install a compatible managed JDK.
+- Let the user choose manually.
+Do not blindly install the latest Java version. Android Gradle Plugin compatibility must determine the required JDK.
+
+Step 5 — Installation summary
+
+Display:
+- Installation location.
+- Components selected.
+- Estimated download size, when available.
+- Available disk space.
+- Existing installations detected.
+- Environment variables that will be modified.
+Step 6 — Install
+
+Start the installation process and show live progress.
+3. Technical architecture
+3.1 Recommended technology stack
+I recommend the following stack for the first release.
+Layer	Technology	Responsibility
+Extension host	TypeScript + Node.js	Core application logic
+Editor integration	VS Code Extension API	Commands, views, notifications
+User interface	React + TypeScript	Dashboard and management screens
+UI styling	Tailwind CSS	Consistent interface
+Bundler	Vite + esbuild	UI and extension builds
+SDK installation	Android CLI / SDK Manager adapter	Package management
+Device communication	ADB	Future device management
+Process execution	Node.js child processes	Execute Android tools
+Configuration	JSON	Persist user preferences
+Testing	Vitest	Unit and integration tests
+
+A crucial design decision: React should only handle the interface. The extension host should own all system operations.
+
+The React interface must never execute PowerShell commands, modify environment variables or directly manipulate SDK files.
+
+Instead, it communicates with the extension host using VS Code's message-passing API. VS Code officially supports this through Webviews. 
+Visual Studio Code Extension API+1
+
+3.2 High-level architecture
+VS Code Extension
+
+Commands · Activity Bar · Status Bar · Views
+
+
+React Dashboard
+
+Setup wizard · Installation progress · Component status · Settings
+
+
+Extension Core Services
+Environment Manager
+
+
+SDK Manager
+
+
+JDK Manager
+
+
+Installation Engine
+
+
+Validation Engine
+
+
+Diagnostic Engine
+
+
+Configuration Store
+
+
+Process Manager
+
+
+
+
+
+Windows Integration Layer
+Filesystem
+
+
+PowerShell
+
+
+Windows Environment
+
+
+Process Execution
+
+
+
+
+
+Android SDK
+
+cmdline-tools · platform-tools · build-tools · platforms · emulator
+
+
+Architecture responsibilities
+Service	Responsibilities
+SDK Manager	Discover, install, update and remove SDK packages
+Installation Engine	Download, extract, execute and track operations
+Environment Manager	Configure ANDROID_HOME and PATH
+JDK Manager	Detect existing JDKs and optionally install one
+Validation Engine	Check installation health
+Diagnostic Engine	Explain errors and suggest fixes
+Process Manager	Execute processes, capture output and terminate jobs
+Configuration Store	Persist installation path and preferences
+
+Each service should be independent and testable.
+3.3 Important implementation detail: SDK Manager abstraction
+We should not tightly couple our code to a single Android CLI executable.
+
+Android's official documentation currently describes the traditional sdkmanager package manager, while newer Android CLI documentation also introduces an android sdk command. 
+Android Developers+1
+
+
+Therefore, create an interface:
+interface AndroidPackageManager {
+  listPackages(): Promise<PackageInfo[]>;
+
+  listInstalledPackages(): Promise<PackageInfo[]>;
+
+  installPackages(
+    packages: string[],
+    onProgress: (progress: InstallProgress) => void
+  ): Promise<InstallResult>;
+
+  updatePackages(): Promise<InstallResult>;
+
+  acceptLicenses(): Promise<LicenseResult>;
+}
+
+
+Implement the first supported backend using the official SDK command-line tools available in the installed distribution.
+
+This gives us the flexibility to change the backend later without rewriting the dashboard or installation engine.
+3.4 Installation directory specification
+The root directory should be configurable.
+
+For example:
+D:\Android_Tools\
+│
+├── sdk\
+│   ├── cmdline-tools\
+│   │   └── latest\
+│   ├── platform-tools\
+│   ├── build-tools\
+│   ├── platforms\
+│   ├── emulator\
+│   ├── system-images\
+│   └── licenses\
+│
+├── jdk\
+│   └── managed\
+│
+├── downloads\
+│
+├── logs\
+│
+└── config\
+    ├── settings.json
+    ├── installation.json
+    └── manifest.json
+
+
+Important implementation rules:
+- Preserve Google's expected SDK folder structure.
+- Do not move SDK components after installation.
+- Keep temporary ZIP files in downloads.
+- Delete temporary files only after verifying successful extraction.
+- Maintain a manifest of installed components and their versions.
+- Never overwrite an existing SDK installation without user confirmation.
+The sdkmanager package installation mechanism supports installing packages into a specified SDK root. 
+Android Developers+1
+
+3.5 Environment variable strategy
+Use ANDROID_HOME as the canonical SDK variable.
+
+Google identifies ANDROID_HOME as the recommended variable and documents ANDROID_SDK_ROOT as deprecated. If the older variable already exists, check that it agrees with ANDROID_HOME. 
+Android Developers
+
+Variable	Action
+ANDROID_HOME	Create or update
+ANDROID_SDK_ROOT	Preserve if existing and consistent
+JAVA_HOME	Configure only when user selects managed JDK or explicitly chooses an existing JDK
+PATH	Add missing required entries
+
+Example PATH entries:
+%ANDROID_HOME%\platform-tools
+%ANDROID_HOME%\cmdline-tools\latest\bin
+%ANDROID_HOME%\emulator
+
+
+The emulator entry is only needed when that component is installed.
+
+Important Windows behaviour: Changing persistent environment variables does not automatically update the environment inherited by an already-running VS Code process. We must update the current extension host where possible and clearly prompt the user to restart VS Code for complete propagation.
+
+Never blindly overwrite PATH. Read the existing entries, preserve them, normalize comparisons and add only missing entries.
+3.6 JDK management
+This needs special attention.
+
+Different Android Gradle Plugin versions require different Java versions. For example, Android Gradle Plugin 8.x requires JDK 17, while newer projects may have different requirements. 
+Android Developers
+
+
+Our JDK manager should have three strategies:
+1. Detect an existing JDK through JAVA_HOME and PATH.
+2. Install a managed JDK in Android_Tools\jdk\managed.
+3. Allow a user to specify an existing JDK installation manually.
+For a managed JDK, use a trusted distribution and verify its download checksum.
+
+Do not force a single Java version onto all projects. Future project-aware validation should inspect the project's Gradle and Android Gradle Plugin configuration.
+
+4. Installation engine design
+This is probably the most important technical module in Phase 1.
+
+We need a robust installation process, not just a sequence of shell commands.
+Installation lifecycle
+1. Validate Windows version and available disk space.
+2. Detect existing Android SDK installations.
+3. Validate selected installation directory.
+4. Download command-line tools.
+5. Verify archive checksum and extract files.
+6. Initialize SDK package manager.
+7. Retrieve package catalog and select versions.
+8. Install selected packages.
+9. Handle SDK license acceptance.
+10. Configure environment variables.
+11. Run installation validation.
+12. Generate installation report.
+
+Progress tracking
+Every installation task should have its own state.
+State	Meaning
+Pending	Not started
+Downloading	Download in progress
+Extracting	Files being extracted
+Installing	Package installation running
+Verifying	Validating installation
+Completed	Successfully installed
+Failed	Installation failed
+Skipped	Not selected or not applicable
+
+We should track both overall progress and individual package progress.
+
+Do not fabricate percentage values. When the package manager doesn't provide reliable progress, display an indeterminate progress indicator with the current operation and downloaded byte count where available.
+Error handling
+Some errors we should explicitly handle:
+Error	Suggested recovery
+Java not detected	Detect or configure JDK
+SDK manager unavailable	Repair command-line tools
+License not accepted	Reopen license acceptance
+Download interrupted	Retry and resume where supported
+Insufficient disk space	Suggest another drive
+Invalid installation path	Request a valid directory
+Permission denied	Explain permissions and suggest a user-writable directory
+SDK package unavailable	Refresh package catalog
+Conflicting SDK paths	Show both paths and ask which to use
+
+Installation must be restartable. If a download or package installation fails, don't force the user to start everything from scratch.
+5. User interface specification
+The extension should have a dedicated Activity Bar icon named Android Dev Tools.
+
+I recommend a clean, light-first interface with a professional developer-tool aesthetic. No unnecessary gradients or decorative cards.
+5.1 Main navigation
+Android Dev Tools
+
+Concept
+
+
+Overview
+
+Setup Manager
+
+SDK Components
+
+JDK Manager
+
+Diagnostics
+
+Settings
+
+
+Android Dev Tools v0.1.0
+MVP
+
+
+5.2 Overview dashboard
+The dashboard should answer four questions immediately:
+1. Is Android development configured?
+2. Where is the SDK installed?
+3. Which components are installed?
+4. Are there any errors?
+Suggested layout:
+Environment Overview
+Example state
+
+Ready
+Android development environment is configured.
+SDK
+
+Installed
+
+
+ADB
+
+Available
+
+
+Java
+
+Detected
+
+
+Licenses
+
+Accepted
+
+
+
+
+Installation directory
+D:\Android_Tools\sdk
+
+
+
+Component health
+Command-line Tools
+
+Installed
+
+Platform Tools
+
+Installed
+
+Build Tools
+
+Installed
+
+Android Platform
+
+Installed
+
+Emulator
+
+Not installed
+
+
+Actions
+Illustrative
+
+Verify Environment
+Repair SDK
+Manage Packages
+
+
+This is a UI specification preview, not a live extension.
+5.3 SDK Components screen
+This screen should provide a component-wise installation manager.
+
+Users should be able to:
+- See installed packages.
+- See available packages.
+- Check version numbers.
+- Install missing packages.
+- Update selected packages.
+- Uninstall optional packages.
+- View package descriptions and dependencies.
+For example:
+Component	Version	Status
+Command-line Tools	Latest	Installed
+Platform Tools	Latest	Installed
+Build Tools	Selected	Installed
+Android Platform	Selected API	Installed
+Emulator	Latest	Available
+System Image	Selected API	Not installed
+
+Avoid hardcoding version numbers into the UI. Retrieve package metadata from the package manager.
+5.4 Diagnostics screen
+This is a major usability opportunity.
+
+Instead of simply showing:
+adb is not recognized
+
+
+Show:
+ADB is not available in PATH
+
+The ADB executable exists, but the current environment cannot locate it.
+
+Detected location
+D:\Android_Tools\sdk\platform-tools\adb.exe
+
+Recommended solution
+
+Add the platform-tools directory to the user PATH.
+Fix automatically
+Show manual steps
+
+
+The diagnostic engine should distinguish between:
+- Missing files.
+- Missing PATH entries.
+- Incorrect SDK locations.
+- Conflicting environment variables.
+- Permission problems.
+- Invalid JDK configurations.
+Automatic repairs should always preview the changes and request user confirmation.
+
+6. Configuration and data model
+We should keep configuration simple and versioned.
+settings.json
+{
+  "schemaVersion": 1,
+  "sdk": {
+    "root": "D:\\Android_Tools\\sdk",
+    "installationProfile": "physical-device"
+  },
+  "jdk": {
+    "mode": "detect",
+    "path": null
+  },
+  "environment": {
+    "configureAndroidHome": true,
+    "configurePath": true,
+    "preserveExistingVariables": true
+  },
+  "preferences": {
+    "autoValidate": true,
+    "showInstallationNotifications": true
+  }
+}
+
+
+installation.json
+{
+  "schemaVersion": 1,
+  "installationId": "generated-uuid",
+  "sdkRoot": "D:\\Android_Tools\\sdk",
+  "status": "completed",
+  "installedComponents": [
+    {
+      "id": "platform-tools",
+      "version": "detected-version",
+      "status": "installed"
+    },
+    {
+      "id": "build-tools",
+      "version": "detected-version",
+      "status": "installed"
+    }
+  ],
+  "lastValidatedAt": null
+}
+
+
+These are illustrative schemas. Actual versions must come from the installed packages, not from static defaults.
+Configuration storage
+Use VS Code's globalStorageUri for extension-level data rather than scattering configuration files across project directories.
+
+For a workspace-specific project configuration, use workspaceState or workspace storage. VS Code provides these mechanisms specifically for extension persistence. 
+Visual Studio Code Extension API
+
+
+7. Non-functional requirements
+These are important because installation software can affect the user's development environment.
+Requirement	Expected behaviour
+Reliability	Recover from interrupted operations
+Performance	Avoid blocking VS Code UI
+Security	Verify downloads and avoid untrusted scripts
+Privacy	No telemetry by default in MVP
+Compatibility	Windows 10/11, x64 initially
+Storage	User-configurable SDK directory
+Permissions	No administrator access for ordinary user-level installation
+Maintainability	Independent services and modular package management
+Accessibility	Keyboard navigation and readable diagnostics
+Resource usage	Low idle CPU and memory consumption
+
+Security requirements:
+- Never execute commands constructed directly from untrusted UI strings.
+- Use argument arrays instead of shell-concatenated commands.
+- Validate all user-provided paths.
+- Verify downloaded archives using trusted checksums.
+- Avoid silently accepting licenses.
+- Never modify machine-wide environment variables by default.
+- Do not delete existing SDK directories automatically.
+- Log operations without exposing sensitive user data.
+8. Phase 1 implementation plan
+Now let's convert the PRD into actual development tasks.
+
+I recommend six implementation milestones.
+Milestone 1 — Extension foundation
+First development milestone
+Objective: Create a working VS Code extension with the basic navigation and application structure.
+
+Tasks:
+- Initialize TypeScript VS Code extension.
+- Configure React and Vite.
+- Create Android Dev Tools Activity Bar entry.
+- Create Overview, Setup Manager and Settings views.
+- Implement extension-to-webview communication.
+- Add persistent configuration.
+- Implement logging infrastructure.
+Deliverable: A functioning VS Code extension with a basic dashboard.
+Milestone 2 — SDK discovery and detection
+Objective: Detect existing Android installations before downloading anything.
+
+Tasks:
+- Detect ANDROID_HOME.
+- Detect deprecated ANDROID_SDK_ROOT.
+- Search common SDK installation locations.
+- Detect adb.exe.
+- Detect sdkmanager.bat.
+- Detect installed platforms and build tools.
+- Detect Java through JAVA_HOME and PATH.
+- Read installed package versions.
+- Identify conflicting SDK installations.
+Deliverable: Environment detection and health report.
+
+This is particularly important because many users already have Android SDK installed, and we should not make them download everything again.
+Milestone 3 — SDK installation engine
+Objective: Implement the actual Android SDK installer.
+
+Tasks:
+- Installation directory selection.
+- Disk-space validation.
+- Download command-line tools.
+- Verify SHA-256 checksum.
+- Extract and configure command-line tools.
+- Retrieve package catalog.
+- Install required packages.
+- Accept licenses through an explicit user-approved flow.
+- Display installation progress.
+- Capture errors and logs.
+- Support retry and recovery.
+Deliverable: Functional Android SDK installer.
+Milestone 4 — JDK manager
+Objective: Support existing and managed JDK installations.
+
+Tasks:
+- Detect installed Java versions.
+- Validate Java executable.
+- Display JAVA_HOME.
+- Allow manual JDK selection.
+- Install managed JDK.
+- Verify JDK version.
+- Configure JAVA_HOME when authorized.
+- Preserve existing Java configuration.
+Deliverable: JDK management functionality.
+Milestone 5 — Environment configuration
+Objective: Make the installation usable outside the extension.
+
+Tasks:
+- Configure ANDROID_HOME.
+- Reconcile existing ANDROID_SDK_ROOT.
+- Update user PATH.
+- Preserve unrelated environment variables.
+- Refresh the current extension process environment.
+- Notify users when a VS Code restart is needed.
+- Validate configuration using fresh processes.
+Deliverable: Fully configured Android development environment.
+Milestone 6 — Diagnostics and final validation
+Objective: Make sure the installation actually works.
+
+Validation checklist:
+- [ ] SDK directory exists.
+- [ ] Command-line tools execute.
+- [ ] SDK package manager responds.
+- [ ] Platform tools are installed.
+- [ ] ADB version is detected.
+- [ ] Build tools are available.
+- [ ] Android platform is available.
+- [ ] SDK licenses are accepted.
+- [ ] ANDROID_HOME is correct.
+- [ ] PATH entries are correct.
+- [ ] Java is detected when required.
+- [ ] Existing Gradle wrapper can locate the configured JDK and SDK.
+Deliverable: Installation health report and repair functionality.
+
+9. Suggested project structure
+I'd organize the repository like this:
+android-dev-tools/
+│
+├── package.json
+├── tsconfig.json
+├── vite.config.ts
+├── esbuild.js
+│
+├── src/
+│   ├── extension/
+│   │   ├── extension.ts
+│   │   ├── commands/
+│   │   ├── providers/
+│   │   └── messaging/
+│   │
+│   ├── core/
+│   │   ├── sdk/
+│   │   │   ├── sdk-manager.ts
+│   │   │   ├── sdk-discovery.ts
+│   │   │   ├── package-catalog.ts
+│   │   │   └── package-manager-adapter.ts
+│   │   │
+│   │   ├── installer/
+│   │   │   ├── installer.ts
+│   │   │   ├── downloader.ts
+│   │   │   ├── extractor.ts
+│   │   │   ├── progress.ts
+│   │   │   └── recovery.ts
+│   │   │
+│   │   ├── jdk/
+│   │   │   ├── jdk-manager.ts
+│   │   │   ├── jdk-detection.ts
+│   │   │   └── jdk-installer.ts
+│   │   │
+│   │   ├── environment/
+│   │   │   ├── environment-manager.ts
+│   │   │   ├── path-manager.ts
+│   │   │   └── windows-environment.ts
+│   │   │
+│   │   ├── diagnostics/
+│   │   │   ├── diagnostics.ts
+│   │   │   └── health-check.ts
+│   │   │
+│   │   ├── process/
+│   │   │   └── process-manager.ts
+│   │   │
+│   │   └── config/
+│   │       ├── config-manager.ts
+│   │       └── schemas.ts
+│   │
+│   ├── ui/
+│   │   ├── App.tsx
+│   │   ├── components/
+│   │   ├── pages/
+│   │   │   ├── Overview.tsx
+│   │   │   ├── SetupManager.tsx
+│   │   │   ├── Components.tsx
+│   │   │   ├── JDKManager.tsx
+│   │   │   ├── Diagnostics.tsx
+│   │   │   └── Settings.tsx
+│   │   ├── hooks/
+│   │   └── styles/
+│   │
+│   └── shared/
+│       ├── types.ts
+│       ├── messages.ts
+│       └── constants.ts
+│
+├── tests/
+│   ├── unit/
+│   ├── integration/
+│   └── fixtures/
+│
+├── resources/
+│   └── icons/
+│
+└── README.md
+
+
+One important rule: keep all Windows-specific operations inside core/environment. This will make future Linux and macOS support easier without redesigning the application.
+
+10. Acceptance criteria — When is Phase 1 complete?
+We shouldn't consider the MVP finished just because the SDK downloads successfully.
+
+It should pass these real-world scenarios.
+Scenario	Expected result
+New developer with no SDK	Complete setup without manual SDK configuration
+Developer with existing SDK	Detect and reuse existing installation
+Developer selects D: drive	Install into selected location
+Download interrupted	Recover without unnecessary redownloads
+License not accepted	Explain and provide acceptance flow
+Existing Java installation	Detect and validate it
+Managed JDK selected	Install and configure compatible JDK
+PATH already contains ADB	Avoid duplicate entries
+Incorrect SDK path	Diagnose and offer repair
+Missing build tools	Install selected compatible version
+VS Code restarted	New terminal recognizes configured tools
+
+MVP success criteria:
+- A new user can prepare a physical-device Android development environment without manually downloading individual SDK packages.
+- An existing SDK installation can be detected and reused.
+- Installation progress is visible and accurate.
+- Environment configuration is safe and reversible.
+- Diagnostics explain problems and offer appropriate solutions.
+11. Development execution order
+Here's the order I'd actually follow rather than trying to develop every module simultaneously.
+Phase 1 development tracker
+Overall implementation progress
+
+0/24 tasks
+
+
+
+1. Extension foundation
+
+0/4
+
+[ ] Initialize VS Code extension
+[ ] Configure React + Vite
+[ ] Create Activity Bar and navigation
+[ ] Implement webview messaging
+
+
+2. SDK detection
+
+0/4
+
+[ ] Detect SDK paths
+[ ] Detect ADB and SDK Manager
+[ ] Detect Java installations
+[ ] Generate health report
+
+
+3. Installation engine
+
+0/4
+
+[ ] Download command-line tools
+[ ] Verify and extract archives
+[ ] Install SDK packages
+[ ] Track progress and errors
+
+
+4. JDK management
+
+0/4
+
+[ ] Detect JDK versions
+[ ] Manual JDK selection
+[ ] Managed JDK installation
+[ ] Configure JAVA_HOME
+
+
+5. Environment management
+
+0/4
+
+[ ] Configure ANDROID_HOME
+[ ] Safely update PATH
+[ ] Handle existing variables
+[ ] Validate environment
+
+
+6. Diagnostics and testing
+
+0/4
+
+[ ] Implement repair actions
+[ ] Test clean installation
+[ ] Test existing SDK migration
+[ ] Test interrupted installation
+
+Reset checklist
+12. Important risks and decisions
+Before starting, there are five things I want us to get right.
+
+1. Don't bundle the entire Android SDK inside the extension.
+
+The extension should download and manage SDK components on demand. Bundling everything would make the extension unnecessarily large.
+
+2. Don't assume the latest SDK is always right.
+
+Offer a recommended default, but allow users to select API levels and build-tools versions. Eventually, inspect the project's compileSdk and Gradle configuration.
+
+3. Don't install Java unnecessarily.
+
+Detect existing installations first. Offer managed installation only when needed or explicitly requested.
+
+4. Don't make setup dependent on administrator permissions.
+
+Prefer user-level installations and user-level environment variables. Clearly explain when an operation genuinely requires elevated permissions.
+
+5. Don't make the React interface responsible for installation.
+
+The extension host must control every installation operation. This is especially important for reliable cancellation, progress tracking and error recovery.
+
+13. Official technical references
+These are the documentation sources I'd use while implementing the project.
+- Android SDK Command-line Tools
+- SDK Manager documentation
+- Android environment variables
+- Java versions in Android builds
+- VS Code Extension API
+- VS Code Webview API
+
+14. Let's start development
+My recommendation is to begin with the foundation, not the installer.
+
+We should first establish the extension structure, UI, communication layer and service architecture. Then we can implement SDK detection before writing installation code.
+Next development task
+Recommended
+
+Milestone 1 — Extension Foundation
+Create the complete project skeleton, configure React + TypeScript + VS Code Extension API, establish messaging between the UI and extension host, and build the initial dashboard.
+
+Expected output
+- Working VS Code extension.
+- Android Dev Tools sidebar.
+- Overview dashboard.
+- Setup Manager placeholder.
+- Settings page.
+- Modular service architecture.
+- Initial unit tests.
+  Start Milestone 1
+
+One final product decision: I'd keep the extension free and open-source, with no dependency on Android Studio. The user should be able to install Android Dev Tools, select a folder, click Install and have a working Android development environment without manually configuring SDK components.
