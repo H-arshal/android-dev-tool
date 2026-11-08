@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import { BridgeMessage, SettingsConfig, SystemHealthReport } from '../../shared/types';
 import { MessageTypes, createErrorMessage, createMessage } from '../../shared/messages';
 import { DEFAULT_SETTINGS } from '../../shared/constants';
+import { SdkDiscovery } from '../../core/sdk/sdk-discovery';
 
 export class MessageRouter {
   private webview: vscode.Webview | null = null;
@@ -80,69 +81,7 @@ export class MessageRouter {
   }
 
   private async getSystemHealthReport(): Promise<SystemHealthReport> {
-    // Baseline detection snapshot for Milestone 1 (expanded in Milestone 2)
-    const envAndroidHome = process.env['ANDROID_HOME'] || null;
-    const envAndroidSdkRoot = process.env['ANDROID_SDK_ROOT'] || null;
-    const envJavaHome = process.env['JAVA_HOME'] || null;
-
-    const isInstalled = !!envAndroidHome;
-
-    return {
-      overallStatus: isInstalled ? 'ready' : 'warning',
-      sdkRoot: envAndroidHome || this.settings.sdk.root,
-      isCustomSdk: !!envAndroidHome,
-      androidHome: envAndroidHome,
-      androidSdkRoot: envAndroidSdkRoot,
-      adbAvailableInPath: false,
-      adbVersion: undefined,
-      javaDetected: !!envJavaHome,
-      javaVersion: envJavaHome ? 'Detected' : undefined,
-      javaHome: envJavaHome,
-      licensesAccepted: false,
-      components: [
-        {
-          id: 'cmdline-tools',
-          name: 'Command-line Tools',
-          isInstalled: false,
-          statusText: 'Not verified'
-        },
-        {
-          id: 'platform-tools',
-          name: 'Platform Tools (ADB)',
-          isInstalled: false,
-          statusText: 'Not verified'
-        },
-        {
-          id: 'build-tools',
-          name: 'Build Tools',
-          isInstalled: false,
-          statusText: 'Not verified'
-        },
-        {
-          id: 'platforms',
-          name: 'Android Platform',
-          isInstalled: false,
-          statusText: 'Not verified'
-        },
-        {
-          id: 'emulator',
-          name: 'Android Emulator',
-          isInstalled: false,
-          statusText: 'Not installed (Optional)'
-        }
-      ],
-      issues: isInstalled ? [] : [
-        {
-          id: 'missing-sdk',
-          severity: 'warning',
-          title: 'Android SDK Not Configured',
-          description: 'No existing ANDROID_HOME environment variable or active installation was detected.',
-          solution: 'Run the Setup Manager wizard to install the required Android tools.',
-          canAutoFix: false
-        }
-      ],
-      lastChecked: new Date().toISOString()
-    };
+    return SdkDiscovery.scanEnvironment(this.settings.sdk.root);
   }
 
   private loadSettings() {

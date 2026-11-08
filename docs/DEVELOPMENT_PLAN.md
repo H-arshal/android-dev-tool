@@ -46,22 +46,22 @@ flowchart LR
 ### Milestone 2 — SDK Discovery & Environment Detection
 **Objective:** Implement non-destructive inspection of the host system to discover existing Android SDKs, tools, and Java installations before any installation actions are taken.
 
-- [ ] **Task 2.1: Environment Variable & Path Detection**
+- [x] **Task 2.1: Environment Variable & Path Detection**
   - Probe `process.env.ANDROID_HOME` and legacy `process.env.ANDROID_SDK_ROOT`.
   - Read user environment variables from Windows Registry (`HKCU:\Environment`).
   - Inspect `PATH` for `platform-tools`, `cmdline-tools`, and `emulator` directories.
-- [ ] **Task 2.2: Binary Probe & Validation**
+- [x] **Task 2.2: Binary Probe & Validation**
   - Probe `adb.exe` presence, version (`adb version`), and operational status.
   - Probe `sdkmanager.bat` presence and executable permissions.
   - Probe `java.exe` in `JAVA_HOME` and `PATH`, parsing `java -version`.
-- [ ] **Task 2.3: Installed Component Enumeration**
+- [x] **Task 2.3: Installed Component Enumeration**
   - Scan SDK root directories (`platforms/`, `build-tools/`, `platform-tools/`).
   - Read package versions from `source.properties` files inside installed packages.
-- [ ] **Task 2.4: System Health Report Compilation**
+- [x] **Task 2.4: System Health Report Compilation**
   - Synthesize discovered paths, binary versions, and missing elements into a `SystemHealthReport`.
   - Push the report via IPC to the Webview to populate the Overview dashboard.
 
-**Deliverable:** An accurate system inspection engine that displays existing tools and configurations on the Overview dashboard without writing any files.
+**Deliverable:** An accurate system inspection engine that displays existing tools and configurations on the Overview dashboard without writing any files. *(Completed & Verified)*
 
 ---
 
@@ -150,7 +150,7 @@ flowchart LR
 
 ---
 
-## 3. Implementation Task Matrix (4 / 24 Completed)
+## 3. Implementation Task Matrix (8 / 24 Completed)
 
 | # | Milestone | Task Name | Status |
 |---|---|---|---|
@@ -158,10 +158,10 @@ flowchart LR
 | 2 | M1: Foundation | 1.2 Activity Bar & View Container Registration | [x] Completed |
 | 3 | M1: Foundation | 1.3 Typed IPC Messaging Bridge | [x] Completed |
 | 4 | M1: Foundation | 1.4 Base UI Shell & Page Routing | [x] Completed |
-| 5 | M2: Discovery | 2.1 Environment Variable & Path Detection | [ ] Pending |
-| 6 | M2: Discovery | 2.2 Binary Probe & Validation | [ ] Pending |
-| 7 | M2: Discovery | 2.3 Installed Component Enumeration | [ ] Pending |
-| 8 | M2: Discovery | 2.4 System Health Report Compilation | [ ] Pending |
+| 5 | M2: Discovery | 2.1 Environment Variable & Path Detection | [x] Completed |
+| 6 | M2: Discovery | 2.2 Binary Probe & Validation | [x] Completed |
+| 7 | M2: Discovery | 2.3 Installed Component Enumeration | [x] Completed |
+| 8 | M2: Discovery | 2.4 System Health Report Compilation | [x] Completed |
 | 9 | M3: Installer | 3.1 Directory Selection & Pre-flight Validation | [ ] Pending |
 | 10 | M3: Installer | 3.2 Streaming Downloader with SHA-256 Checksum | [ ] Pending |
 | 11 | M3: Installer | 3.3 Canonical Archive Extraction | [ ] Pending |
