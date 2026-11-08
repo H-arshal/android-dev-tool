@@ -1,13 +1,16 @@
 import * as vscode from 'vscode';
-import { BridgeMessage, SettingsConfig, SystemHealthReport } from '../../shared/types';
+import { BridgeMessage, SettingsConfig, SystemHealthReport, StartInstallPayload } from '../../shared/types';
 import { MessageTypes, createErrorMessage, createMessage } from '../../shared/messages';
 import { DEFAULT_SETTINGS } from '../../shared/constants';
 import { SdkDiscovery } from '../../core/sdk/sdk-discovery';
+import { Installer } from '../../core/installer/installer';
+import { CmdlineToolsAdapter } from '../../core/sdk/package-manager-adapter';
 
 export class MessageRouter {
   private webviews = new Set<vscode.Webview>();
   private settings: SettingsConfig = { ...DEFAULT_SETTINGS };
   private onOpenInMainView?: () => void;
+  private installer = new Installer();
 
   constructor(private readonly context: vscode.ExtensionContext) {
     this.loadSettings();
@@ -64,6 +67,44 @@ export class MessageRouter {
           });
           const selectedPath = selectedUri && selectedUri.length > 0 ? selectedUri[0].fsPath : null;
           this.postResponse(MessageTypes.DIRECTORY_SELECTED, { selectedPath }, id, senderWebview);
+          break;
+
+        case MessageTypes.START_INSTALLATION:
+          const startPayload = payload as StartInstallPayload;
+          try {
+            const installRes = await this.installer.start(startPayload, (progress) => {
+              this.postMessage(MessageTypes.INSTALL_PROGRESS_EVENT, progress);
+            });
+            this.postResponse(MessageTypes.INSTALL_COMPLETED, installRes, id, senderWebview);
+            const freshReport = await this.getSystemHealthReport();
+            this.postMessage(MessageTypes.HEALTH_REPORT, freshReport);
+            vscode.window.showInformationMessage('Android Dev Tools: Installation completed successfully!');
+          } catch (installErr: unknown) {
+            const errorMsg = installErr instanceof Error ? installErr.message : String(installErr);
+            this.postMessage(MessageTypes.INSTALL_FAILED, {
+              phase: 'failed',
+              error: { code: 'ERR_INSTALL_FAILED', message: errorMsg },
+              canRetry: true,
+              suggestedAction: 'Please check your internet connection and disk space, then retry.'
+            });
+            vscode.window.showErrorMessage(`Android Dev Tools Installation Error: ${errorMsg}`);
+          }
+          break;
+
+        case MessageTypes.CANCEL_INSTALLATION:
+          this.installer.cancel();
+          vscode.window.showInformationMessage('Android Dev Tools: Cancelling installation...');
+          break;
+
+        case MessageTypes.ACCEPT_LICENSES:
+          const targetSdk = this.settings.sdk.root || process.env['ANDROID_HOME'];
+          if (targetSdk) {
+            const adapter = new CmdlineToolsAdapter(targetSdk);
+            const res = await adapter.acceptLicenses();
+            vscode.window.showInformationMessage(res.message);
+            const freshReport = await this.getSystemHealthReport();
+            this.postMessage(MessageTypes.HEALTH_REPORT, freshReport);
+          }
           break;
 
         case MessageTypes.RUN_AUTO_REPAIR:

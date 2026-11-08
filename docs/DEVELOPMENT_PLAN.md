@@ -68,22 +68,22 @@ flowchart LR
 ### Milestone 3 — SDK Installation Engine
 **Objective:** Build a resilient, streaming installer capable of downloading official Google command-line tools, unpacking them into the required structure, installing base SDK packages, and managing licenses.
 
-- [ ] **Task 3.1: Directory Selection & Pre-flight Validation**
+- [x] **Task 3.1: Directory Selection & Pre-flight Validation**
   - Provide an interactive drive/directory selector in the Setup Wizard.
   - Validate write permissions and query available disk space via Node.js/PowerShell.
-- [ ] **Task 3.2: Streaming Downloader with SHA-256 Checksum**
+- [x] **Task 3.2: Streaming Downloader with SHA-256 Checksum**
   - Implement HTTP streaming downloader with resume support for interrupted transfers.
   - Calculate SHA-256 hash incrementally and verify against known Google digests.
-- [ ] **Task 3.3: Canonical Archive Extraction**
+- [x] **Task 3.3: Canonical Archive Extraction**
   - Extract `commandlinetools-win-*.zip` into `<sdk-root>/cmdline-tools/latest/`.
   - Ensure correct nested directory structure expected by `sdkmanager.bat`.
-- [ ] **Task 3.4: Package Installation & License Flow**
+- [x] **Task 3.4: Package Installation & License Flow**
   - Implement `AndroidPackageManager` adapter around `sdkmanager.bat`.
   - Install selected profile packages (`platform-tools`, `build-tools`, `platforms`).
   - Implement automated/explicit license acceptance (writing valid license hashes to `<sdk-root>/licenses/`).
   - Dispatch real-time progress events (bytes, current package, state) to the Webview.
 
-**Deliverable:** A working installer that can prepare a fresh, functional Android SDK from scratch into a user-specified directory.
+**Deliverable:** A working installer that can prepare a fresh, functional Android SDK from scratch into a user-specified directory. *(Completed & Verified)*
 
 ---
 
@@ -150,7 +150,7 @@ flowchart LR
 
 ---
 
-## 3. Implementation Task Matrix (8 / 24 Completed)
+## 3. Implementation Task Matrix (12 / 24 Completed)
 
 | # | Milestone | Task Name | Status |
 |---|---|---|---|
@@ -162,10 +162,10 @@ flowchart LR
 | 6 | M2: Discovery | 2.2 Binary Probe & Validation | [x] Completed |
 | 7 | M2: Discovery | 2.3 Installed Component Enumeration | [x] Completed |
 | 8 | M2: Discovery | 2.4 System Health Report Compilation | [x] Completed |
-| 9 | M3: Installer | 3.1 Directory Selection & Pre-flight Validation | [ ] Pending |
-| 10 | M3: Installer | 3.2 Streaming Downloader with SHA-256 Checksum | [ ] Pending |
-| 11 | M3: Installer | 3.3 Canonical Archive Extraction | [ ] Pending |
-| 12 | M3: Installer | 3.4 Package Installation & License Flow | [ ] Pending |
+| 9 | M3: Installer | 3.1 Directory Selection & Pre-flight Validation | [x] Completed |
+| 10 | M3: Installer | 3.2 Streaming Downloader with SHA-256 Checksum | [x] Completed |
+| 11 | M3: Installer | 3.3 Canonical Archive Extraction | [x] Completed |
+| 12 | M3: Installer | 3.4 Package Installation & License Flow | [x] Completed |
 | 13 | M4: JDK | 4.1 Java Version & AGP Compatibility Inspector | [ ] Pending |
 | 14 | M4: JDK | 4.2 Manual JDK Configuration | [ ] Pending |
 | 15 | M4: JDK | 4.3 Managed JDK Installer | [ ] Pending |

@@ -37,3 +37,24 @@ export const COMMON_WINDOWS_SDK_PATHS = [
   '%LOCALAPPDATA%\\Android\\Sdk'
 ];
 
+export const GOOGLE_CMDLINE_TOOLS = {
+  URL: 'https://dl.google.com/android/repository/commandlinetools-win-11076708_latest.zip',
+  FILE_NAME: 'commandlinetools-win-11076708_latest.zip',
+  SHA256: '2d2d50bba3f463b6c169e60341eb4d71b3403fa8a3d89cf7388517770123687c'
+};
+
+export const PROFILE_DEFAULT_PACKAGES: Record<string, string[]> = {
+  'physical-device': [
+    'platform-tools',
+    'build-tools;34.0.0',
+    'platforms;android-34'
+  ],
+  'full-setup': [
+    'platform-tools',
+    'build-tools;34.0.0',
+    'platforms;android-34',
+    'emulator',
+    'system-images;android-34;google_apis;x86_64'
+  ]
+};
+
