@@ -87,7 +87,7 @@ export const SidebarView: React.FC<SidebarViewProps> = ({
           <ExternalLink className="w-3 h-3 opacity-70" />
         </button>
         <p className="text-[10px] text-center text-vscode-muted">
-          Opens full-width workspace &amp; minimizes panels
+          Opens full workspace &amp; minimizes right &amp; terminal panels
         </p>
       </div>
 
@@ -145,3 +145,4 @@ export const SidebarView: React.FC<SidebarViewProps> = ({
     </div>
   );
 };
+

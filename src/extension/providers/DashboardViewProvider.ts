@@ -15,8 +15,9 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     this.messageRouter.setOnOpenInMainView(async () => {
       this.showOrRevealEditorPanel();
       try {
-        // Automatically minimize sidebar and terminal/bottom panels for full workspace focus
-        await vscode.commands.executeCommand('workbench.action.closeSidebar');
+        // Automatically minimize right side panel (Secondary Side Bar / Auxiliary Bar)
+        await vscode.commands.executeCommand('workbench.action.closeAuxiliaryBar');
+        // Automatically minimize bottom panel (terminals / output)
         await vscode.commands.executeCommand('workbench.action.closePanel');
       } catch (err) {
         console.warn('Could not minimize panels:', err);
