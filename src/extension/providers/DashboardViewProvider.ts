@@ -12,8 +12,15 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     private readonly extensionUri: vscode.Uri,
     private readonly messageRouter: MessageRouter
   ) {
-    this.messageRouter.setOnOpenInMainView(() => {
+    this.messageRouter.setOnOpenInMainView(async () => {
       this.showOrRevealEditorPanel();
+      try {
+        // Automatically minimize sidebar and terminal/bottom panels for full workspace focus
+        await vscode.commands.executeCommand('workbench.action.closeSidebar');
+        await vscode.commands.executeCommand('workbench.action.closePanel');
+      } catch (err) {
+        console.warn('Could not minimize panels:', err);
+      }
     });
   }
 
@@ -33,7 +40,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     };
 
     this.messageRouter.attachWebview(webviewView.webview);
-    webviewView.webview.html = this.getHtmlForWebview(webviewView.webview);
+    webviewView.webview.html = this.getHtmlForWebview(webviewView.webview, 'sidebar');
   }
 
   public showOrRevealEditorPanel(): vscode.WebviewPanel {
@@ -59,7 +66,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     this.currentPanel = panel;
     panel.iconPath = vscode.Uri.joinPath(this.extensionUri, 'resources', 'icons', 'android.svg');
     this.messageRouter.attachWebview(panel.webview);
-    panel.webview.html = this.getHtmlForWebview(panel.webview);
+    panel.webview.html = this.getHtmlForWebview(panel.webview, 'editor');
 
     panel.onDidDispose(() => {
       this.currentPanel = undefined;
@@ -68,7 +75,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     return panel;
   }
 
-  private getHtmlForWebview(webview: vscode.Webview): string {
+  private getHtmlForWebview(webview: vscode.Webview, mode: 'sidebar' | 'editor'): string {
     const nonce = getNonce();
 
     // Check for production built assets in dist/ui
@@ -111,6 +118,9 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
 </head>
 <body class="bg-vscode-bg text-vscode-fg text-sm antialiased select-none overflow-x-hidden">
   <div id="root"></div>
+  <script nonce="${nonce}">
+    window.__VIEW_MODE__ = '${mode}';
+  </script>
   <script nonce="${nonce}" type="module" src="${scriptUri}"></script>
 </body>
 </html>`;
