@@ -28,3 +28,4 @@ describe('Installer', () => {
     ).resolves.not.toThrow();
   });
 });
+

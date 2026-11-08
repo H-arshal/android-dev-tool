@@ -59,3 +59,4 @@ Installed packages:
     expect(parsed[2].category).toBe('platforms');
   });
 });
+
