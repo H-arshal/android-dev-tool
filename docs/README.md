@@ -1,4 +1,4 @@
-# Android Dev Tools — Technical Documentation
+# Android Dev Tools : Technical Documentation
 
 Welcome to the internal engineering documentation for **Android Dev Tools**, a Visual Studio Code extension engineered to streamline Android development environment setup, SDK management, JDK configuration, and system diagnostics on Windows.
 

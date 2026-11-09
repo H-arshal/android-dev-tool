@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { BridgeMessage, SystemHealthReport, SettingsConfig, InstallProgress } from '../../shared/types';
+import { BridgeMessage, SystemHealthReport, SettingsConfig, InstallProgress, JdkInfo } from '../../shared/types';
 import { MessageTypes, createMessage } from '../../shared/messages';
 import { DEFAULT_SETTINGS } from '../../shared/constants';
 
@@ -36,6 +36,7 @@ export function useExtensionBridge() {
   const [settings, setSettings] = useState<SettingsConfig>(DEFAULT_SETTINGS);
   const [installProgress, setInstallProgress] = useState<InstallProgress | null>(null);
   const [selectedDirectory, setSelectedDirectory] = useState<string | null>(null);
+  const [availableJdks, setAvailableJdks] = useState<JdkInfo[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
   // Response callback resolvers for request-response RPC
@@ -56,6 +57,11 @@ export function useExtensionBridge() {
     const handleWindowMessage = (event: MessageEvent) => {
       const message = event.data as BridgeMessage;
       if (!message || !message.type) return;
+
+      // Ignore Antigravity IDE / Jetski internal RPC messages
+      if ((message as any).channel === 'agy-ext-antigravity-api' || message.type === 'postmessage-rpc') {
+        return;
+      }
 
       const { id, type, payload } = message;
 
@@ -87,6 +93,10 @@ export function useExtensionBridge() {
           setInstallProgress(payload as InstallProgress);
           break;
 
+        case MessageTypes.JDK_LIST_DATA:
+          setAvailableJdks(payload as JdkInfo[]);
+          break;
+
         default:
           break;
       }
@@ -96,6 +106,7 @@ export function useExtensionBridge() {
 
     // Announce UI readiness to Extension Host
     postMessage(MessageTypes.UI_READY);
+    postMessage(MessageTypes.GET_JDK_LIST);
 
     return () => {
       window.removeEventListener('message', handleWindowMessage);
@@ -105,6 +116,18 @@ export function useExtensionBridge() {
   const refreshHealthReport = useCallback(() => {
     setIsLoading(true);
     postMessage(MessageTypes.GET_HEALTH_REPORT);
+  }, [postMessage]);
+
+  const fetchJdks = useCallback(() => {
+    postMessage(MessageTypes.GET_JDK_LIST);
+  }, [postMessage]);
+
+  const setJdkConfig = useCallback((mode: 'detect' | 'managed' | 'manual', customPath?: string) => {
+    return postMessage(MessageTypes.SET_JDK_CONFIG, { mode, customPath });
+  }, [postMessage]);
+
+  const installManagedJdk = useCallback(() => {
+    return postMessage(MessageTypes.INSTALL_MANAGED_JDK);
   }, [postMessage]);
 
   const saveSettings = useCallback((newSettings: SettingsConfig) => {
@@ -125,9 +148,13 @@ export function useExtensionBridge() {
     settings,
     installProgress,
     selectedDirectory,
+    availableJdks,
     isLoading,
     postMessage,
     refreshHealthReport,
+    fetchJdks,
+    setJdkConfig,
+    installManagedJdk,
     saveSettings,
     openDirectoryPicker,
     runAutoRepair

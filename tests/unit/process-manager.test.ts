@@ -1,4 +1,7 @@
 import { describe, it, expect } from 'vitest';
+import * as fs from 'fs';
+import * as path from 'path';
+import * as os from 'os';
 import { ProcessManager } from '../../src/core/process/process-manager';
 
 describe('ProcessManager', () => {
@@ -29,5 +32,21 @@ describe('ProcessManager', () => {
     expect(result.exitCode).toBe(-1);
     expect(result.stderr).toContain('timed out');
   });
-});
 
+  it('should execute a Windows batch file without EINVAL errors', async () => {
+    if (process.platform !== 'win32') return;
+
+    const tempBat = path.join(os.tmpdir(), `test_pm_${Date.now()}.bat`);
+    fs.writeFileSync(tempBat, '@echo off\r\necho BATCH SUCCESS: %1 %2\r\n');
+
+    try {
+      const result = await ProcessManager.execute(tempBat, ['arg1', 'arg with spaces']);
+      expect(result.exitCode).toBe(0);
+      expect(result.stdout).toContain('BATCH SUCCESS: arg1 "arg with spaces"');
+    } finally {
+      try {
+        fs.unlinkSync(tempBat);
+      } catch {}
+    }
+  });
+});

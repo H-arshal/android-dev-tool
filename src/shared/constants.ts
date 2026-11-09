@@ -58,3 +58,22 @@ export const PROFILE_DEFAULT_PACKAGES: Record<string, string[]> = {
   ]
 };
 
+export const MANAGED_JDK_CONFIG = {
+  DISTRIBUTION: 'Eclipse Temurin OpenJDK 17 LTS',
+  VERSION: '17.0.12',
+  URL: 'https://github.com/adoptium/temurin17-binaries/releases/download/jdk-17.0.12%2B7/OpenJDK17U-jdk_x64_windows_hotspot_17.0.12_7.zip',
+  FILE_NAME: 'OpenJDK17U-jdk_x64_windows_hotspot_17.0.12_7.zip',
+  FOLDER_NAME: 'managed'
+};
+
+export const COMMON_WINDOWS_JDK_SEARCH_PATHS = [
+  'C:\\Program Files\\Java',
+  'C:\\Program Files\\Eclipse Adoptium',
+  'C:\\Program Files\\Microsoft',
+  'C:\\Program Files\\Amazon Corretto',
+  'C:\\Program Files\\Zulu',
+  'C:\\Program Files\\Android\\Android Studio\\jbr',
+  '%LOCALAPPDATA%\\Programs\\Eclipse Adoptium',
+  '%USERPROFILE%\\.jdks'
+];
+

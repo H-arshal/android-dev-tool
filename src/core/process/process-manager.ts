@@ -10,11 +10,15 @@ export interface ProcessOptions {
   cwd?: string;
   env?: NodeJS.ProcessEnv;
   timeout?: number;
+  shell?: boolean | string;
+  onStdout?: (data: string) => void;
+  onStderr?: (data: string) => void;
 }
 
 export class ProcessManager {
   /**
    * Spawns an executable with argument arrays, preventing shell injection vulnerabilities.
+   * On Windows, automatically routes .bat and .cmd files through cmd.exe to prevent Node.js spawn EINVAL errors.
    */
   public static async execute(
     command: string,
@@ -27,64 +31,97 @@ export class ProcessManager {
       let stdout = '';
       let stderr = '';
       let isSettled = false;
+      let timer: NodeJS.Timeout | undefined;
 
-      const proc = child_process.spawn(command, args, {
-        cwd: options.cwd,
-        env: options.env ? { ...process.env, ...options.env } : process.env,
-        windowsHide: true,
-        shell: false
-      });
-
-      const timer = setTimeout(() => {
+      const settle = (result: ProcessResult) => {
         if (!isSettled) {
           isSettled = true;
-          try {
-            proc.kill();
-          } catch {
-            // Process may already be dead
-          }
-          resolve({
-            stdout,
-            stderr: stderr + `\nProcess timed out after ${timeout}ms`,
-            exitCode: -1
+          if (timer) clearTimeout(timer);
+          resolve(result);
+        }
+      };
+
+      const isBatch = process.platform === 'win32' && /\.(bat|cmd)$/i.test(command);
+      let proc: child_process.ChildProcess;
+
+      try {
+        if (isBatch) {
+          const comspec = process.env.COMSPEC || 'cmd.exe';
+          const quotedArgs = args.map(arg => {
+            if (arg.includes(' ') && !arg.startsWith('"')) {
+              return `"${arg}"`;
+            }
+            return arg;
+          });
+          const innerCmd = `"${command}" ${quotedArgs.join(' ')}`.trim();
+          const fullCommandLine = `"${innerCmd}"`;
+
+          proc = child_process.spawn(comspec, ['/d', '/s', '/c', fullCommandLine], {
+            cwd: options.cwd,
+            env: options.env ? { ...process.env, ...options.env } : process.env,
+            windowsHide: true,
+            windowsVerbatimArguments: true
+          });
+        } else {
+          proc = child_process.spawn(command, args, {
+            cwd: options.cwd,
+            env: options.env ? { ...process.env, ...options.env } : process.env,
+            windowsHide: true,
+            shell: options.shell ?? false
           });
         }
+      } catch (err: unknown) {
+        settle({
+          stdout: '',
+          stderr: err instanceof Error ? err.message : String(err),
+          exitCode: -1
+        });
+        return;
+      }
+
+      timer = setTimeout(() => {
+        try {
+          proc.kill();
+        } catch {
+          // Process may already be dead
+        }
+        settle({
+          stdout,
+          stderr: stderr ? `${stderr}\nProcess timed out after ${timeout}ms` : `Process timed out after ${timeout}ms`,
+          exitCode: -1
+        });
       }, timeout);
 
       if (proc.stdout) {
         proc.stdout.on('data', (data) => {
-          stdout += data.toString();
+          const text = data.toString();
+          stdout += text;
+          if (options.onStdout) options.onStdout(text);
         });
       }
 
       if (proc.stderr) {
         proc.stderr.on('data', (data) => {
-          stderr += data.toString();
+          const text = data.toString();
+          stderr += text;
+          if (options.onStderr) options.onStderr(text);
         });
       }
 
       proc.on('error', (err) => {
-        if (!isSettled) {
-          isSettled = true;
-          clearTimeout(timer);
-          resolve({
-            stdout,
-            stderr: err.message,
-            exitCode: -1
-          });
-        }
+        settle({
+          stdout,
+          stderr: err.message,
+          exitCode: -1
+        });
       });
 
       proc.on('close', (code) => {
-        if (!isSettled) {
-          isSettled = true;
-          clearTimeout(timer);
-          resolve({
-            stdout: stdout.trim(),
-            stderr: stderr.trim(),
-            exitCode: code ?? 0
-          });
-        }
+        settle({
+          stdout: stdout.trim(),
+          stderr: stderr.trim(),
+          exitCode: code ?? 0
+        });
       });
     });
   }

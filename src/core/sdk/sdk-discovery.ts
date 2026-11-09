@@ -4,14 +4,13 @@ import { ProcessManager } from '../process/process-manager';
 import { WindowsEnvironment } from '../environment/windows-environment';
 import { SystemHealthReport, ComponentHealth, DiagnosticIssue, HealthStatus } from '../../shared/types';
 import { COMMON_WINDOWS_SDK_PATHS } from '../../shared/constants';
+import { DiagnosticsEngine } from '../diagnostics/diagnostics';
 
 export class SdkDiscovery {
   /**
    * Performs a comprehensive, non-destructive audit of the Android development environment.
    */
   public static async scanEnvironment(fallbackRoot?: string | null): Promise<SystemHealthReport> {
-    const issues: DiagnosticIssue[] = [];
-
     // 1. Discover Environment Variables
     const processAndroidHome = process.env['ANDROID_HOME'] || null;
     const userAndroidHome = await WindowsEnvironment.getUserEnvironmentVariable('ANDROID_HOME');
@@ -33,46 +32,6 @@ export class SdkDiscovery {
       ...COMMON_WINDOWS_SDK_PATHS
     ]);
 
-    // Check for conflicting SDK root variables
-    if (effectiveAndroidHome && effectiveAndroidSdkRoot) {
-      if (WindowsEnvironment.normalizePath(effectiveAndroidHome) !== WindowsEnvironment.normalizePath(effectiveAndroidSdkRoot)) {
-        issues.push({
-          id: 'conflicting-sdk-paths',
-          severity: 'warning',
-          title: 'Conflicting Android SDK Environment Variables',
-          description: `ANDROID_HOME (${effectiveAndroidHome}) and deprecated ANDROID_SDK_ROOT (${effectiveAndroidSdkRoot}) point to different locations.`,
-          solution: 'Reconcile ANDROID_SDK_ROOT to match ANDROID_HOME.',
-          canAutoFix: true,
-          autoFixAction: 'SET_ANDROID_HOME'
-        });
-      }
-    }
-
-    // If an SDK directory is discovered but ANDROID_HOME is not set
-    if (discoveredSdkRoot && !effectiveAndroidHome) {
-      issues.push({
-        id: 'missing-android-home',
-        severity: 'warning',
-        title: 'ANDROID_HOME Variable Not Set',
-        description: `An Android SDK was detected at ${discoveredSdkRoot}, but the ANDROID_HOME environment variable is not defined.`,
-        detectedPath: discoveredSdkRoot,
-        solution: 'Set the user-level ANDROID_HOME environment variable to point to this SDK directory.',
-        canAutoFix: true,
-        autoFixAction: 'SET_ANDROID_HOME'
-      });
-    }
-
-    if (!discoveredSdkRoot) {
-      issues.push({
-        id: 'missing-sdk',
-        severity: 'warning',
-        title: 'Android SDK Not Found',
-        description: 'No Android SDK was detected in standard directories or environment variables.',
-        solution: 'Run the Setup Manager wizard to install the required Android development tools.',
-        canAutoFix: false
-      });
-    }
-
     // 3. Inspect ADB and PATH
     const userPath = await WindowsEnvironment.getUserPath();
     const userPathEntries = WindowsEnvironment.parsePathEntries(userPath);
@@ -80,61 +39,19 @@ export class SdkDiscovery {
     const combinedPathEntries = [...new Set([...userPathEntries, ...processPathEntries])];
 
     const adbProbe = await this.probeAdb(discoveredSdkRoot, combinedPathEntries);
-    if (!adbProbe.inPath && adbProbe.existsOnDisk) {
-      issues.push({
-        id: 'adb-not-in-path',
-        severity: 'warning',
-        title: 'ADB is Not Recognized in PATH',
-        description: 'The adb.exe executable exists on disk, but its containing platform-tools folder is absent from your PATH.',
-        detectedPath: adbProbe.binaryPath,
-        solution: 'Append the platform-tools directory to your user PATH environment variable.',
-        canAutoFix: true,
-        autoFixAction: 'ADD_PATH'
-      });
-    }
-
-    // 4. Inspect Java Environment
     const javaProbe = await this.probeJava(effectiveJavaHome);
-    if (!javaProbe.detected) {
-      issues.push({
-        id: 'missing-java',
-        severity: 'error',
-        title: 'Java Runtime Not Found',
-        description: 'No compatible Java Development Kit (JDK) was found in JAVA_HOME or system PATH.',
-        solution: 'Install the Managed OpenJDK 17 or configure an existing JDK.',
-        canAutoFix: false
-      });
-    } else if (javaProbe.majorVersion && javaProbe.majorVersion < 17) {
-      issues.push({
-        id: 'incompatible-java',
-        severity: 'warning',
-        title: 'Outdated Java Version Detected',
-        description: `Java ${javaProbe.majorVersion} was detected. Modern Android Gradle Plugin (AGP 8.x+) requires JDK 17 or higher.`,
-        detectedPath: effectiveJavaHome || undefined,
-        solution: 'Upgrade to JDK 17 LTS or install the Managed OpenJDK in Android Dev Tools.',
-        canAutoFix: false
-      });
-    }
-
-    // 5. Inspect Installed SDK Components
     const components = await this.inspectComponents(discoveredSdkRoot);
-
-    // 6. Inspect Licenses
     const licensesAccepted = await this.checkLicenses(discoveredSdkRoot);
-    if (discoveredSdkRoot && !licensesAccepted) {
-      issues.push({
-        id: 'unaccepted-licenses',
-        severity: 'warning',
-        title: 'Android SDK Licenses Pending',
-        description: 'The Android SDK license agreements have not yet been accepted for this installation.',
-        detectedPath: path.join(discoveredSdkRoot, 'licenses'),
-        solution: 'Accept the Android SDK license terms to allow Gradle to download and assemble packages.',
-        canAutoFix: true,
-        autoFixAction: 'ACCEPT_LICENSES'
-      });
-    }
 
-    // 7. Calculate Overall Health Status
+    // 4. Run Standardized Diagnostic Engine Probes
+    const issues = await DiagnosticsEngine.runAllChecks({
+      sdkRoot: discoveredSdkRoot,
+      androidHome: effectiveAndroidHome,
+      androidSdkRoot: effectiveAndroidSdkRoot,
+      javaHome: effectiveJavaHome
+    });
+
+    // 5. Calculate Overall Health Status
     let overallStatus: HealthStatus = 'ready';
     if (issues.some(i => i.severity === 'error') || !discoveredSdkRoot) {
       overallStatus = 'error';

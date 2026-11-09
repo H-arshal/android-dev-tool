@@ -1,10 +1,13 @@
 import * as vscode from 'vscode';
-import { BridgeMessage, SettingsConfig, SystemHealthReport, StartInstallPayload } from '../../shared/types';
+import { BridgeMessage, SettingsConfig, SystemHealthReport, StartInstallPayload, JdkConfigPayload } from '../../shared/types';
 import { MessageTypes, createErrorMessage, createMessage } from '../../shared/messages';
 import { DEFAULT_SETTINGS } from '../../shared/constants';
 import { SdkDiscovery } from '../../core/sdk/sdk-discovery';
 import { Installer } from '../../core/installer/installer';
 import { CmdlineToolsAdapter } from '../../core/sdk/package-manager-adapter';
+import { JdkManager } from '../../core/jdk/jdk-manager';
+import { EnvironmentManager } from '../../core/environment/environment-manager';
+import { DiagnosticsEngine } from '../../core/diagnostics/diagnostics';
 
 export class MessageRouter {
   private webviews = new Set<vscode.Webview>();
@@ -28,6 +31,13 @@ export class MessageRouter {
   }
 
   private async handleMessage(message: BridgeMessage, senderWebview: vscode.Webview) {
+    if (!message || typeof message !== 'object') return;
+
+    // Ignore internal Antigravity IDE / Jetski RPC probes
+    if ((message as any).channel === 'agy-ext-antigravity-api' || message.type === 'postmessage-rpc') {
+      return;
+    }
+
     const { id, type, payload } = message;
 
     try {
@@ -107,13 +117,91 @@ export class MessageRouter {
           }
           break;
 
+        case MessageTypes.GET_JDK_LIST:
+          const jdks = await JdkManager.getAvailableJdks(this.settings.sdk.root);
+          this.postResponse(MessageTypes.JDK_LIST_DATA, jdks, id, senderWebview);
+          break;
+
+        case MessageTypes.SET_JDK_CONFIG:
+          const jdkPayload = payload as JdkConfigPayload;
+          try {
+            const configRes = await JdkManager.setJdkConfiguration(
+              jdkPayload.mode,
+              this.settings.sdk.root,
+              jdkPayload.customPath
+            );
+            this.settings.jdk.mode = jdkPayload.mode;
+            this.settings.jdk.path = configRes.javaHome;
+            await this.persistSettings();
+
+            vscode.window.showInformationMessage(`JAVA_HOME configured to: ${configRes.javaHome}`);
+            this.postResponse(MessageTypes.SETTINGS_DATA, this.settings, id, senderWebview);
+
+            const freshHealth = await this.getSystemHealthReport();
+            this.postMessage(MessageTypes.HEALTH_REPORT, freshHealth);
+          } catch (jdkErr: unknown) {
+            const msg = jdkErr instanceof Error ? jdkErr.message : String(jdkErr);
+            vscode.window.showErrorMessage(`Failed to configure JDK: ${msg}`);
+            this.postError(type, 'ERR_JDK_CONFIG', msg, id, senderWebview);
+          }
+          break;
+
+        case MessageTypes.INSTALL_MANAGED_JDK:
+          if (!this.settings.sdk.root) {
+            throw new Error('Please select an SDK root directory before installing the Managed JDK.');
+          }
+          try {
+            const installedJdk = await JdkManager.installManagedJdk(this.settings.sdk.root, (progress) => {
+              this.postMessage(MessageTypes.INSTALL_PROGRESS_EVENT, progress);
+            });
+            await JdkManager.setJdkConfiguration('managed', this.settings.sdk.root);
+            this.settings.jdk.mode = 'managed';
+            this.settings.jdk.path = installedJdk.path;
+            await this.persistSettings();
+
+            vscode.window.showInformationMessage('Eclipse Temurin OpenJDK 17 LTS installed successfully!');
+            this.postResponse(MessageTypes.MANAGED_JDK_INSTALLED, installedJdk, id, senderWebview);
+
+            const freshReport = await this.getSystemHealthReport();
+            this.postMessage(MessageTypes.HEALTH_REPORT, freshReport);
+          } catch (installJdkErr: unknown) {
+            const msg = installJdkErr instanceof Error ? installJdkErr.message : String(installJdkErr);
+            vscode.window.showErrorMessage(`Managed JDK installation failed: ${msg}`);
+            this.postError(type, 'ERR_JDK_INSTALL', msg, id, senderWebview);
+          }
+          break;
+
         case MessageTypes.RUN_AUTO_REPAIR:
-          vscode.window.showInformationMessage(`Auto-repair initiated for issue.`);
-          this.postResponse(MessageTypes.AUTO_REPAIR_RESULT, {
-            issueId: (payload as { issueId: string }).issueId,
-            success: true,
-            message: 'Auto-repair scheduled.'
-          }, id, senderWebview);
+          const { issueId } = payload as { issueId: string };
+          const targetSdkRoot = this.settings.sdk.root || process.env['ANDROID_HOME'];
+
+          try {
+            if (!targetSdkRoot) {
+              throw new Error('No SDK root directory configured.');
+            }
+
+            const repairResult = await DiagnosticsEngine.executeAutoRepair(issueId, {
+              sdkRoot: targetSdkRoot,
+              androidHome: process.env['ANDROID_HOME'] || null,
+              androidSdkRoot: process.env['ANDROID_SDK_ROOT'] || null,
+              javaHome: process.env['JAVA_HOME'] || null
+            });
+
+            vscode.window.showInformationMessage(`Android Dev Tools: ${repairResult.message}`);
+
+            this.postResponse(MessageTypes.AUTO_REPAIR_RESULT, {
+              issueId,
+              success: true,
+              message: repairResult.message
+            }, id, senderWebview);
+
+            const updatedReport = await this.getSystemHealthReport();
+            this.postMessage(MessageTypes.HEALTH_REPORT, updatedReport);
+          } catch (repairErr: unknown) {
+            const errorMsg = repairErr instanceof Error ? repairErr.message : String(repairErr);
+            vscode.window.showErrorMessage(`Auto-repair failed: ${errorMsg}`);
+            this.postError(type, 'ERR_AUTO_REPAIR', errorMsg, id, senderWebview);
+          }
           break;
 
         default:

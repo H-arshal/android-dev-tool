@@ -108,6 +108,21 @@ export interface SettingsConfig {
   };
 }
 
+export interface JdkInfo {
+  path: string;
+  version: string;
+  majorVersion: number;
+  vendor: string;
+  isJdk: boolean;
+  isCompatibleWithAgp8: boolean;
+  isManaged: boolean;
+}
+
+export interface JdkConfigPayload {
+  mode: 'detect' | 'managed' | 'manual';
+  customPath?: string;
+}
+
 export interface PackageInfo {
   id: string; // e.g., 'platforms;android-34'
   description: string;

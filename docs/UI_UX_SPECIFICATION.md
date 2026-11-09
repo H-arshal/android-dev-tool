@@ -12,8 +12,8 @@ This document details the interface architecture, design system, theme integrati
    Avoid heavy decorative illustrations, 3D elements, or superfluous animations. Focus on clear typography, tabular density, immediate status clarity, and rapid task completion.
 3. **Responsive Dual-Mode Container:**
    The Webview must adapt flawlessly to two distinct display contexts:
-   - **Narrow Sidebar View (`WebviewViewProvider`):** Width 300px – 450px. Vertical stacking, compact cards.
-   - **Wide Editor Panel View (`WebviewPanel`):** Width 800px – 1600px+. Multi-column layout with detailed metrics.
+   - **Narrow Sidebar View (`WebviewViewProvider`):** Width 300px - 450px. Vertical stacking, compact cards.
+   - **Wide Editor Panel View (`WebviewPanel`):** Width 800px - 1600px+. Multi-column layout with detailed metrics.
 
 ---
 

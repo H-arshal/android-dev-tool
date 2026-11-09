@@ -25,8 +25,12 @@ export const App: React.FC = () => {
     settings,
     installProgress,
     selectedDirectory,
+    availableJdks,
     isLoading,
     refreshHealthReport,
+    fetchJdks,
+    setJdkConfig,
+    installManagedJdk,
     saveSettings,
     openDirectoryPicker,
     runAutoRepair,
@@ -85,7 +89,13 @@ export const App: React.FC = () => {
         )}
 
         {activeTab === 'jdk' && (
-          <JDKManagerPage report={healthReport} />
+          <JDKManagerPage
+            report={healthReport}
+            availableJdks={availableJdks}
+            onSelectJdk={(customPath) => setJdkConfig('manual', customPath)}
+            onInstallManagedJdk={() => installManagedJdk()}
+            onRefreshJdks={fetchJdks}
+          />
         )}
 
         {activeTab === 'diagnostics' && (

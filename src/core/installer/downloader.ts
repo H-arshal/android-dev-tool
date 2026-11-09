@@ -120,18 +120,24 @@ export class Downloader {
           });
         });
 
-        req.on('error', (err) => {
-          fileStream.close();
-          try {
-            if (fs.existsSync(tempPath)) fs.unlinkSync(tempPath);
-          } catch {}
-          reject(err);
+        req.on('error', (err: Error) => {
+          fileStream.close(() => {
+            try {
+              if (fs.existsSync(tempPath)) fs.unlinkSync(tempPath);
+            } catch {}
+            reject(err);
+          });
         });
 
         if (options.timeout) {
           req.setTimeout(options.timeout, () => {
             req.destroy();
-            reject(new Error(`Download timed out after ${options.timeout}ms`));
+            fileStream.close(() => {
+              try {
+                if (fs.existsSync(tempPath)) fs.unlinkSync(tempPath);
+              } catch {}
+              reject(new Error(`Download timed out after ${options.timeout}ms`));
+            });
           });
         }
       };

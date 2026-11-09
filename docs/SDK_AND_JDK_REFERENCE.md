@@ -114,9 +114,9 @@ Modern Android builds require specific Java Development Kit (JDK) versions depen
 
 | AGP Version Range | Minimum Java Version | Recommended Java Version | Default Gradle Version |
 |---|---|---|---|
-| **AGP 8.5.x – 8.8+** | Java 17 | **Java 17 (or 21)** | Gradle 8.7+ |
-| **AGP 8.0.x – 8.4.x** | Java 17 | **Java 17** | Gradle 8.0 – 8.6 |
-| **AGP 7.0.x – 7.4.x** | Java 11 | **Java 11** | Gradle 7.0 – 7.5 |
+| **AGP 8.5.x - 8.8+** | Java 17 | **Java 17 (or 21)** | Gradle 8.7+ |
+| **AGP 8.0.x - 8.4.x** | Java 17 | **Java 17** | Gradle 8.0 - 8.6 |
+| **AGP 7.0.x - 7.4.x** | Java 11 | **Java 11** | Gradle 7.0 - 7.5 |
 | **AGP 4.x (Legacy)** | Java 8 | **Java 8** | Gradle 6.x |
 
 ### Recommended Managed JDK Distribution

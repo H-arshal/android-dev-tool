@@ -3,6 +3,7 @@ import * as path from 'path';
 import { PackageInfo, InstallProgress, InstallResult } from '../../shared/types';
 import { GOOGLE_KNOWN_LICENSES } from '../../shared/constants';
 import { ProcessManager } from '../process/process-manager';
+import { WindowsEnvironment } from '../environment/windows-environment';
 
 export interface AndroidPackageManager {
   listPackages(): Promise<PackageInfo[]>;
@@ -82,7 +83,25 @@ export class CmdlineToolsAdapter implements AndroidPackageManager {
     }
 
     // Execute sdkmanager.bat (can take a few minutes depending on download speed)
-    const result = await ProcessManager.execute(this.sdkmanagerPath, args, { timeout: 600000 });
+    const env = await this.getExecutionEnv();
+    const result = await ProcessManager.execute(this.sdkmanagerPath, args, {
+      timeout: 600000,
+      env,
+      onStdout: (chunk) => {
+        if (onProgress) {
+          const lines = chunk.trim().split('\n');
+          const lastLine = lines[lines.length - 1]?.trim();
+          const percentMatch = chunk.match(/(\d+)%/);
+          const percent = percentMatch ? parseInt(percentMatch[1], 10) : undefined;
+          onProgress({
+            phase: 'installing_packages',
+            currentTask: `Installing ${packages.join(', ')}`,
+            percentage: percent,
+            message: lastLine || 'Downloading and installing Android SDK packages...'
+          });
+        }
+      }
+    });
 
     if (result.exitCode !== 0) {
       throw new Error(`Package installation failed: ${result.stderr || result.stdout}`);
@@ -112,7 +131,8 @@ export class CmdlineToolsAdapter implements AndroidPackageManager {
       '--update'
     ];
 
-    const result = await ProcessManager.execute(this.sdkmanagerPath, args, { timeout: 600000 });
+    const env = await this.getExecutionEnv();
+    const result = await ProcessManager.execute(this.sdkmanagerPath, args, { timeout: 600000, env });
 
     if (result.exitCode !== 0) {
       throw new Error(`Package update failed: ${result.stderr || result.stdout}`);
@@ -135,8 +155,9 @@ export class CmdlineToolsAdapter implements AndroidPackageManager {
       return [];
     }
 
+    const env = await this.getExecutionEnv();
     const args = [`--sdk_root=${this.sdkRoot}`, '--list_installed'];
-    const result = await ProcessManager.execute(this.sdkmanagerPath, args, { timeout: 30000 });
+    const result = await ProcessManager.execute(this.sdkmanagerPath, args, { timeout: 30000, env });
 
     if (result.exitCode !== 0) {
       return [];
@@ -153,14 +174,28 @@ export class CmdlineToolsAdapter implements AndroidPackageManager {
       return [];
     }
 
+    const env = await this.getExecutionEnv();
     const args = [`--sdk_root=${this.sdkRoot}`, '--list'];
-    const result = await ProcessManager.execute(this.sdkmanagerPath, args, { timeout: 60000 });
+    const result = await ProcessManager.execute(this.sdkmanagerPath, args, { timeout: 60000, env });
 
     if (result.exitCode !== 0) {
       return [];
     }
 
     return this.parsePackagesFromOutput(result.stdout, false);
+  }
+
+  private async getExecutionEnv(): Promise<NodeJS.ProcessEnv> {
+    const userJava = await WindowsEnvironment.getUserEnvironmentVariable('JAVA_HOME');
+    const effectiveJavaHome = process.env['JAVA_HOME'] || userJava;
+
+    const env: NodeJS.ProcessEnv = { ...process.env };
+    if (effectiveJavaHome) {
+      env['JAVA_HOME'] = effectiveJavaHome;
+      const javaBin = path.join(effectiveJavaHome, 'bin');
+      env['PATH'] = `${javaBin};${env['PATH'] || ''}`;
+    }
+    return env;
   }
 
   private parsePackagesFromOutput(output: string, isInstalledOnly: boolean): PackageInfo[] {

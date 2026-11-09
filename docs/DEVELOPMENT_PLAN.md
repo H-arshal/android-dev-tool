@@ -21,7 +21,7 @@ flowchart LR
 
 ## 2. Detailed Milestone Breakdown
 
-### Milestone 1 — Extension Foundation & Webview Infrastructure
+### Milestone 1 : Extension Foundation & Webview Infrastructure
 **Objective:** Initialize the project skeleton, configure the build toolchain, establish typed IPC between Extension Host and React Webview, and deliver the shell UI.
 
 - [x] **Task 1.1: Project Toolchain & Build Setup**
@@ -43,7 +43,7 @@ flowchart LR
 
 ---
 
-### Milestone 2 — SDK Discovery & Environment Detection
+### Milestone 2 : SDK Discovery & Environment Detection
 **Objective:** Implement non-destructive inspection of the host system to discover existing Android SDKs, tools, and Java installations before any installation actions are taken.
 
 - [x] **Task 2.1: Environment Variable & Path Detection**
@@ -65,7 +65,7 @@ flowchart LR
 
 ---
 
-### Milestone 3 — SDK Installation Engine
+### Milestone 3 : SDK Installation Engine
 **Objective:** Build a resilient, streaming installer capable of downloading official Google command-line tools, unpacking them into the required structure, installing base SDK packages, and managing licenses.
 
 - [x] **Task 3.1: Directory Selection & Pre-flight Validation**
@@ -87,70 +87,70 @@ flowchart LR
 
 ---
 
-### Milestone 4 — JDK Management
+### Milestone 4 : JDK Management
 **Objective:** Guarantee a compatible Java Development Kit is available and configured for Android Gradle builds.
 
-- [ ] **Task 4.1: Java Version & AGP Compatibility Inspector**
+- [x] **Task 4.1: Java Version & AGP Compatibility Inspector**
   - Detect installed JDK versions on the machine.
   - Validate detected version against Android Gradle Plugin (AGP 8.x requires JDK 17).
-- [ ] **Task 4.2: Manual JDK Configuration**
+- [x] **Task 4.2: Manual JDK Configuration**
   - Allow users to browse and link existing local JDK installations.
   - Validate that selected folder contains `bin/java.exe` and `bin/javac.exe`.
-- [ ] **Task 4.3: Managed JDK Installer**
+- [x] **Task 4.3: Managed JDK Installer**
   - Download official headless OpenJDK (e.g. Eclipse Temurin 17 for Windows x64).
   - Verify checksum and extract to `<install-root>/jdk/managed/`.
-- [ ] **Task 4.4: JAVA_HOME Orchestration**
+- [x] **Task 4.4: JAVA_HOME Orchestration**
   - Configure user-level `JAVA_HOME` to point to the selected or managed JDK.
   - Provide safety checks to preserve existing enterprise Java setups unless explicitly authorized.
 
-**Deliverable:** Reliable Java detection, manual linking, or one-click managed JDK installation ensuring full Gradle build readiness.
+**Deliverable:** Reliable Java detection, manual linking, or one-click managed JDK installation ensuring full Gradle build readiness. *(Completed & Verified)*
 
 ---
 
-### Milestone 5 — Environment & PATH Configuration
+### Milestone 5 : Environment & PATH Configuration
 **Objective:** Make the installed SDK and tools usable from any terminal or external development tool.
 
-- [ ] **Task 5.1: Canonical Variable Configuration**
+- [x] **Task 5.1: Canonical Variable Configuration**
   - Set `ANDROID_HOME` in `HKCU:\Environment` via safe registry methods.
   - Reconcile `ANDROID_SDK_ROOT` to avoid path conflicts.
-- [ ] **Task 5.2: Surgical PATH Mutation**
+- [x] **Task 5.2: Surgical PATH Mutation**
   - Retrieve current User `PATH`.
   - Parse, trim, normalize, and deduplicate entries.
   - Append `%ANDROID_HOME%\platform-tools` and `%ANDROID_HOME%\cmdline-tools\latest\bin`.
   - Enforce maximum PATH length limits to prevent registry truncation.
-- [ ] **Task 5.3: Process Environment Synchronization**
+- [x] **Task 5.3: Process Environment Synchronization**
   - Update `process.env` in the current VS Code Extension Host.
   - Inform developer that external terminal sessions require a VS Code reload/restart.
-- [ ] **Task 5.4: Fresh Process Verification**
+- [x] **Task 5.4: Fresh Process Verification**
   - Spawn an independent child process (`cmd.exe /c "adb version"`) to verify real-world environment inheritance.
 
-**Deliverable:** Fully configured Windows environment variables allowing `adb` and `sdkmanager` to execute in fresh command prompts.
+**Deliverable:** Fully configured Windows environment variables allowing `adb` and `sdkmanager` to execute in fresh command prompts. *(Completed & Verified)*
 
 ---
 
-### Milestone 6 — Diagnostics, Auto-Repair & Verification
+### Milestone 6 : Diagnostics, Auto-Repair & Verification
 **Objective:** Provide diagnostic reporting and one-click remediation for broken environments, backed by comprehensive testing.
 
-- [ ] **Task 6.1: Diagnostic Engine & Probes**
+- [x] **Task 6.1: Diagnostic Engine & Probes**
   - Implement diagnostic rules for common errors:
     - ADB not found in PATH
     - `ANDROID_HOME` pointing to missing path
     - Incompatible Java version
     - Unaccepted licenses
-- [ ] **Task 6.2: One-Click Auto-Repair Actions**
+- [x] **Task 6.2: One-Click Auto-Repair Actions**
   - Provide auto-repair handlers for detected issues (e.g., auto-add missing PATH entry, write missing licenses).
-- [ ] **Task 6.3: Clean & Migration Installation Testing**
+- [x] **Task 6.3: Clean & Migration Installation Testing**
   - Verify clean installation on machine with no prior Android tools.
   - Verify detection and graceful reuse of existing Android SDK.
-- [ ] **Task 6.4: Interrupted Download & Fault Recovery Testing**
+- [x] **Task 6.4: Interrupted Download & Fault Recovery Testing**
   - Test simulated network disconnect during archive download.
   - Verify recovery without corrupted file states or infinite retry loops.
 
-**Deliverable:** Complete diagnostics interface with auto-repair and verified test suites for clean, migration, and failure scenarios.
+**Deliverable:** Complete diagnostics interface with auto-repair and verified test suites for clean, migration, and failure scenarios. *(Completed & Verified)*
 
 ---
 
-## 3. Implementation Task Matrix (12 / 24 Completed)
+## 3. Implementation Task Matrix (24 / 24 Completed - 100% Phase 1 MVP Done)
 
 | # | Milestone | Task Name | Status |
 |---|---|---|---|
@@ -166,18 +166,18 @@ flowchart LR
 | 10 | M3: Installer | 3.2 Streaming Downloader with SHA-256 Checksum | [x] Completed |
 | 11 | M3: Installer | 3.3 Canonical Archive Extraction | [x] Completed |
 | 12 | M3: Installer | 3.4 Package Installation & License Flow | [x] Completed |
-| 13 | M4: JDK | 4.1 Java Version & AGP Compatibility Inspector | [ ] Pending |
-| 14 | M4: JDK | 4.2 Manual JDK Configuration | [ ] Pending |
-| 15 | M4: JDK | 4.3 Managed JDK Installer | [ ] Pending |
-| 16 | M4: JDK | 4.4 JAVA_HOME Orchestration | [ ] Pending |
-| 17 | M5: Environment | 5.1 Canonical Variable Configuration | [ ] Pending |
-| 18 | M5: Environment | 5.2 Surgical PATH Mutation | [ ] Pending |
-| 19 | M5: Environment | 5.3 Process Environment Synchronization | [ ] Pending |
-| 20 | M5: Environment | 5.4 Fresh Process Verification | [ ] Pending |
-| 21 | M6: Diagnostics | 6.1 Diagnostic Engine & Probes | [ ] Pending |
-| 22 | M6: Diagnostics | 6.2 One-Click Auto-Repair Actions | [ ] Pending |
-| 23 | M6: Diagnostics | 6.3 Clean & Migration Installation Testing | [ ] Pending |
-| 24 | M6: Diagnostics | 6.4 Interrupted Download & Fault Recovery Testing | [ ] Pending |
+| 13 | M4: JDK | 4.1 Java Version & AGP Compatibility Inspector | [x] Completed |
+| 14 | M4: JDK | 4.2 Manual JDK Configuration | [x] Completed |
+| 15 | M4: JDK | 4.3 Managed JDK Installer | [x] Completed |
+| 16 | M4: JDK | 4.4 JAVA_HOME Orchestration | [x] Completed |
+| 17 | M5: Environment | 5.1 Canonical Variable Configuration | [x] Completed |
+| 18 | M5: Environment | 5.2 Surgical PATH Mutation | [x] Completed |
+| 19 | M5: Environment | 5.3 Process Environment Synchronization | [x] Completed |
+| 20 | M5: Environment | 5.4 Fresh Process Verification | [x] Completed |
+| 21 | M6: Diagnostics | 6.1 Diagnostic Engine & Probes | [x] Completed |
+| 22 | M6: Diagnostics | 6.2 One-Click Auto-Repair Actions | [x] Completed |
+| 23 | M6: Diagnostics | 6.3 Clean & Migration Installation Testing | [x] Completed |
+| 24 | M6: Diagnostics | 6.4 Interrupted Download & Fault Recovery Testing | [x] Completed |
 
 ---
 

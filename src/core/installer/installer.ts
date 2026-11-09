@@ -14,6 +14,7 @@ import {
 import { Downloader } from './downloader';
 import { Extractor } from './extractor';
 import { CmdlineToolsAdapter } from '../sdk/package-manager-adapter';
+import { EnvironmentManager } from '../environment/environment-manager';
 
 export class Installer {
   private isCancelled = false;
@@ -129,7 +130,19 @@ export class Installer {
 
     const installResult = await pkgAdapter.installPackages(packagesToInstall, onProgress);
 
-    // 6. Write Installation Manifest
+    // 6. Configure Environment Variables and User PATH
+    onProgress({
+      phase: 'configuring_environment',
+      currentTask: 'Configuring ANDROID_HOME and updating User PATH',
+      percentage: 95,
+      message: 'Surgically appending platform-tools and cmdline-tools to User PATH...'
+    });
+
+    await EnvironmentManager.configureFullEnvironment(sdkRoot, {
+      includeEmulator: payload.profile === 'full-setup'
+    });
+
+    // 7. Write Installation Manifest
     const manifestPath = path.join(configDir, 'installation.json');
     const manifestData = {
       schemaVersion: 1,
