@@ -137,6 +137,144 @@ export interface PackageCatalog {
   lastUpdated: string;
 }
 
+export type DeviceState =
+  | 'device'
+  | 'unauthorized'
+  | 'offline'
+  | 'bootloader'
+  | 'recovery'
+  | 'sideload'
+  | 'unknown';
+
+export type DeviceConnectionType = 'usb' | 'wifi' | 'emulator';
+
+export interface DeviceInfo {
+  serial: string;
+  state: DeviceState;
+  model?: string;
+  product?: string;
+  device?: string;
+  transportId?: string;
+  connectionType: DeviceConnectionType;
+}
+
+export interface BatteryInfo {
+  level: number; // 0 - 100
+  isCharging: boolean;
+  health?: string;
+  temperature?: number;
+  scale?: number;
+}
+
+export interface DisplayInfo {
+  size: string; // e.g. "1080x2400"
+  density?: number; // e.g. 440
+}
+
+export interface StorageInfo {
+  total: string;
+  used: string;
+  available: string;
+  percentage: number;
+}
+
+export interface InstallApkOptions {
+  reinstall?: boolean;
+  grantPermissions?: boolean;
+  allowDowngrade?: boolean;
+  allowTestOnly?: boolean;
+}
+
+export interface InstallApkPayload {
+  serial: string;
+  apkPath: string;
+  options?: InstallApkOptions;
+}
+
+export interface InstallApkResult {
+  success: boolean;
+  message: string;
+  errorCode?: string;
+  rawOutput?: string;
+}
+
+export interface RebootPayload {
+  serial: string;
+  mode?: 'system' | 'bootloader' | 'recovery';
+}
+
+export interface WirelessConnectPayload {
+  ip: string;
+  port?: number;
+}
+
+export interface DeviceDetails extends DeviceInfo {
+  manufacturer?: string;
+  marketName?: string;
+  androidVersion?: string; // e.g. "14"
+  apiLevel?: number; // e.g. 34
+  buildNumber?: string;
+  battery?: BatteryInfo;
+  display?: DisplayInfo;
+  storage?: StorageInfo;
+  abi?: string;
+  ipAddress?: string;
+}
+
+export interface AvdInfo {
+  name: string;
+  displayName?: string;
+  target?: string;
+  apiLevel?: number;
+  abi?: string;
+  deviceProfile?: string;
+  path?: string;
+  diskSize?: string;
+  hasPlayStore?: boolean;
+  isRunning: boolean;
+  runningSerial?: string;
+  status?: 'stopped' | 'booting' | 'running';
+}
+
+export type GpuMode = 'auto' | 'swiftshader' | 'host' | 'swangle';
+
+export interface LaunchAvdOptions {
+  coldBoot?: boolean;
+  noWindow?: boolean;
+  wipeData?: boolean;
+  gpuMode?: GpuMode;
+  disableVulkan?: boolean;
+}
+
+export interface LaunchAvdPayload {
+  name: string;
+  options?: LaunchAvdOptions;
+}
+
+export interface StopAvdPayload {
+  name: string;
+  serial?: string;
+}
+
+export interface DeleteAvdPayload {
+  name: string;
+}
+
+export interface CreateAvdPayload {
+  name: string;
+  packagePath: string;
+  deviceProfile?: string;
+  force?: boolean;
+}
+
+export interface SystemImageInfo {
+  id: string;
+  apiLevel: number;
+  tag: string;
+  abi: string;
+  description: string;
+}
+
 export interface BridgeError {
   code: string;
   message: string;

@@ -58,5 +58,33 @@ Installed packages:
     expect(parsed[2].id).toBe('platforms;android-34');
     expect(parsed[2].category).toBe('platforms');
   });
+
+  it('should detect installed packages from disk and return accurate catalog', async () => {
+    const isWindows = process.platform === 'win32';
+    // Create mock installed directories on disk
+    fs.mkdirSync(path.join(tempSdkDir, 'cmdline-tools', 'latest', 'bin'), { recursive: true });
+    fs.mkdirSync(path.join(tempSdkDir, 'platform-tools'), { recursive: true });
+    fs.writeFileSync(path.join(tempSdkDir, 'platform-tools', isWindows ? 'adb.exe' : 'adb'), 'fake');
+    fs.mkdirSync(path.join(tempSdkDir, 'build-tools', '34.0.0'), { recursive: true });
+    fs.mkdirSync(path.join(tempSdkDir, 'platforms', 'android-34'), { recursive: true });
+
+    const adapter = new CmdlineToolsAdapter(tempSdkDir);
+    const catalog = await adapter.getPackageCatalog();
+
+    const cmdline = catalog.find(p => p.id === 'cmdline-tools;latest');
+    expect(cmdline?.isInstalled).toBe(true);
+
+    const platformTools = catalog.find(p => p.id === 'platform-tools');
+    expect(platformTools?.isInstalled).toBe(true);
+
+    const bt34 = catalog.find(p => p.id === 'build-tools;34.0.0');
+    expect(bt34?.isInstalled).toBe(true);
+
+    const plat34 = catalog.find(p => p.id === 'platforms;android-34');
+    expect(plat34?.isInstalled).toBe(true);
+
+    const plat35 = catalog.find(p => p.id === 'platforms;android-35');
+    expect(plat35?.isInstalled).toBe(false);
+  });
 });
 

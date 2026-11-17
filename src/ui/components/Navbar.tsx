@@ -1,14 +1,15 @@
 import React from 'react';
-import { LayoutDashboard, Wrench, Layers, Coffee, AlertCircle, Settings, Maximize2 } from 'lucide-react';
+import { LayoutDashboard, Wrench, Layers, Coffee, Smartphone, AlertCircle, Settings, Maximize2 } from 'lucide-react';
 import { HealthStatus } from '../../shared/types';
 
-export type TabType = 'overview' | 'setup' | 'components' | 'jdk' | 'diagnostics' | 'settings';
+export type TabType = 'overview' | 'setup' | 'components' | 'jdk' | 'devices' | 'diagnostics' | 'settings';
 
 interface NavbarProps {
   activeTab: TabType;
   onSelectTab: (tab: TabType) => void;
   status?: HealthStatus;
   issueCount?: number;
+  deviceCount?: number;
   onOpenInMainView?: () => void;
 }
 
@@ -17,13 +18,15 @@ export const Navbar: React.FC<NavbarProps> = ({
   onSelectTab,
   status = 'ready',
   issueCount = 0,
+  deviceCount,
   onOpenInMainView
 }) => {
   const tabs = [
     { id: 'overview' as TabType, label: 'Overview', icon: LayoutDashboard },
     { id: 'setup' as TabType, label: 'Setup Manager', icon: Wrench },
-    { id: 'components' as TabType, label: 'SDK Packages', icon: Layers },
+    { id: 'components' as TabType, label: 'SDK Manager', icon: Layers },
     { id: 'jdk' as TabType, label: 'JDK Manager', icon: Coffee },
+    { id: 'devices' as TabType, label: 'Device Manager', icon: Smartphone, badge: deviceCount },
     { id: 'diagnostics' as TabType, label: 'Diagnostics', icon: AlertCircle, badge: issueCount },
     { id: 'settings' as TabType, label: 'Settings', icon: Settings },
   ];
@@ -40,8 +43,14 @@ export const Navbar: React.FC<NavbarProps> = ({
     <header className="border-b border-vscode-border bg-vscode-sidebar sticky top-0 z-30">
       <div className="flex items-center justify-between px-3 py-2 border-b border-vscode-border/40">
         <div className="flex items-center space-x-2">
-          <div className="w-6 h-6 flex items-center justify-center rounded bg-vscode-button-bg text-vscode-button-fg">
-            <span className="font-bold text-xs">AD</span>
+          <div className="w-6 h-6 flex items-center justify-center rounded bg-slate-900 border border-emerald-500/40 text-emerald-400 shrink-0">
+            <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M5 16a7 7 0 0 1 14 0Z" />
+              <circle cx="9" cy="12.5" r="0.75" fill="currentColor" stroke="none" />
+              <circle cx="15" cy="12.5" r="0.75" fill="currentColor" stroke="none" />
+              <line x1="7.5" y1="8" x2="6" y2="5.5" />
+              <line x1="16.5" y1="8" x2="18" y2="5.5" />
+            </svg>
           </div>
           <div>
             <span className="font-semibold text-xs tracking-wide">Android Dev Tools</span>

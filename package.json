@@ -1,9 +1,29 @@
 {
   "name": "android-dev-tools",
-  "displayName": "Android Dev Tools",
-  "description": "Simplify Android SDK installation, environment variable configuration, JDK management, and diagnostics in VS Code on Windows.",
-  "version": "0.1.0",
-  "publisher": "android-dev-tools",
+  "displayName": "Android Dev Tool",
+  "description": "Simplify Android SDK installation, environment variable configuration, JDK management, device controls, and emulator management in VS Code on Windows.",
+  "version": "0.2.0",
+  "publisher": "HarshalMoon",
+  "author": "Harshal Moon",
+  "icon": "resources/icons/icon.png",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/H-arshal/android-dev-tool"
+  },
+  "bugs": {
+    "url": "https://github.com/H-arshal/android-dev-tool/issues"
+  },
+  "homepage": "https://github.com/H-arshal/android-dev-tool#readme",
+  "keywords": [
+    "android",
+    "sdk",
+    "jdk",
+    "adb",
+    "mobile",
+    "react-native",
+    "flutter"
+  ],
   "engines": {
     "vscode": "^1.85.0"
   },
@@ -13,6 +33,7 @@
   ],
   "main": "./dist/extension.js",
   "activationEvents": [
+    "onStartupFinished",
     "onView:androidDevTools.mainView",
     "onCommand:androidDevTools.openDashboard",
     "onCommand:androidDevTools.runDiagnostics"
@@ -67,7 +88,8 @@
     "watch:extension": "node esbuild.js --watch",
     "watch:ui": "vite build --watch",
     "watch": "concurrently \"npm run watch:extension\" \"npm run watch:ui\"",
-    "test": "vitest run"
+    "test": "vitest run",
+    "package": "vsce package --no-git-tag-version --allow-missing-repository"
   },
   "dependencies": {
     "lucide-react": "^0.378.0",
@@ -90,4 +112,3 @@
     "vitest": "^1.6.0"
   }
 }
-

@@ -1,5 +1,20 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { BridgeMessage, SystemHealthReport, SettingsConfig, InstallProgress, JdkInfo } from '../../shared/types';
+import {
+  BridgeMessage,
+  SystemHealthReport,
+  SettingsConfig,
+  InstallProgress,
+  JdkInfo,
+  DeviceInfo,
+  DeviceDetails,
+  InstallApkOptions,
+  InstallApkResult,
+  AvdInfo,
+  LaunchAvdOptions,
+  CreateAvdPayload,
+  SystemImageInfo,
+  PackageInfo
+} from '../../shared/types';
 import { MessageTypes, createMessage } from '../../shared/messages';
 import { DEFAULT_SETTINGS } from '../../shared/constants';
 
@@ -37,6 +52,14 @@ export function useExtensionBridge() {
   const [installProgress, setInstallProgress] = useState<InstallProgress | null>(null);
   const [selectedDirectory, setSelectedDirectory] = useState<string | null>(null);
   const [availableJdks, setAvailableJdks] = useState<JdkInfo[]>([]);
+  const [devices, setDevices] = useState<DeviceInfo[]>([]);
+  const [deviceDetails, setDeviceDetails] = useState<Record<string, DeviceDetails>>({});
+  const [isRefreshingDevices, setIsRefreshingDevices] = useState<boolean>(false);
+  const [avds, setAvds] = useState<AvdInfo[]>([]);
+  const [systemImages, setSystemImages] = useState<SystemImageInfo[]>([]);
+  const [packages, setPackages] = useState<PackageInfo[]>([]);
+  const [isRefreshingPackages, setIsRefreshingPackages] = useState<boolean>(false);
+  const [isRefreshingAvds, setIsRefreshingAvds] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
   // Response callback resolvers for request-response RPC
@@ -97,6 +120,42 @@ export function useExtensionBridge() {
           setAvailableJdks(payload as JdkInfo[]);
           break;
 
+        case MessageTypes.DEVICES_LIST_DATA:
+          setDevices(payload as DeviceInfo[]);
+          setIsRefreshingDevices(false);
+          break;
+
+        case MessageTypes.DEVICE_DETAILS_DATA: {
+          const detail = payload as DeviceDetails;
+          if (detail && detail.serial) {
+            setDeviceDetails(prev => ({ ...prev, [detail.serial]: detail }));
+          }
+          break;
+        }
+
+        case MessageTypes.AVDS_LIST_DATA:
+          setAvds(payload as AvdInfo[] || []);
+          setIsRefreshingAvds(false);
+          break;
+
+        case MessageTypes.SYSTEM_IMAGES_DATA:
+          setSystemImages(payload as SystemImageInfo[] || []);
+          break;
+
+        case MessageTypes.PACKAGE_CATALOG:
+          setPackages(payload as PackageInfo[] || []);
+          setIsRefreshingPackages(false);
+          break;
+
+        case MessageTypes.INSTALL_COMPLETED:
+          setInstallProgress({
+            phase: 'completed',
+            currentTask: 'Android development tools installed successfully',
+            percentage: 100,
+            message: 'All Android SDK components are configured and ready.'
+          });
+          break;
+
         default:
           break;
       }
@@ -107,6 +166,10 @@ export function useExtensionBridge() {
     // Announce UI readiness to Extension Host
     postMessage(MessageTypes.UI_READY);
     postMessage(MessageTypes.GET_JDK_LIST);
+    postMessage(MessageTypes.GET_AVDS);
+    postMessage(MessageTypes.GET_SYSTEM_IMAGES);
+    postMessage(MessageTypes.GET_DEVICES);
+    postMessage(MessageTypes.GET_PACKAGES);
 
     return () => {
       window.removeEventListener('message', handleWindowMessage);
@@ -143,16 +206,113 @@ export function useExtensionBridge() {
     postMessage(MessageTypes.RUN_AUTO_REPAIR, { issueId });
   }, [postMessage]);
 
+  const fetchDevices = useCallback(() => {
+    setIsRefreshingDevices(true);
+    return postMessage(MessageTypes.GET_DEVICES);
+  }, [postMessage]);
+
+  const fetchDeviceDetails = useCallback((serial: string) => {
+    return postMessage(MessageTypes.GET_DEVICE_DETAILS, { serial });
+  }, [postMessage]);
+
+  const selectApkFile = useCallback(async (): Promise<string | null> => {
+    const res = await postMessage(MessageTypes.SELECT_APK_FILE) as { filePath?: string };
+    return res?.filePath || null;
+  }, [postMessage]);
+
+  const installApk = useCallback((serial: string, apkPath: string, options?: InstallApkOptions): Promise<InstallApkResult> => {
+    return postMessage(MessageTypes.INSTALL_APK, { serial, apkPath, options }) as Promise<InstallApkResult>;
+  }, [postMessage]);
+
+  const rebootDevice = useCallback((serial: string, mode?: 'system' | 'bootloader' | 'recovery') => {
+    return postMessage(MessageTypes.REBOOT_DEVICE, { serial, mode });
+  }, [postMessage]);
+
+  const takeScreenshot = useCallback((serial: string) => {
+    return postMessage(MessageTypes.TAKE_SCREENSHOT, { serial });
+  }, [postMessage]);
+
+  const openDeviceShell = useCallback((serial: string) => {
+    return postMessage(MessageTypes.OPEN_DEVICE_SHELL, { serial });
+  }, [postMessage]);
+
+  const connectWireless = useCallback((ip: string, port?: number) => {
+    return postMessage(MessageTypes.CONNECT_WIRELESS, { ip, port });
+  }, [postMessage]);
+
+  const enableTcpip = useCallback((serial: string, port?: number) => {
+    return postMessage(MessageTypes.ENABLE_TCPIP, { serial, port });
+  }, [postMessage]);
+
+  const fetchAvds = useCallback(() => {
+    setIsRefreshingAvds(true);
+    return postMessage(MessageTypes.GET_AVDS);
+  }, [postMessage]);
+
+  const launchAvd = useCallback((name: string, options?: LaunchAvdOptions) => {
+    return postMessage(MessageTypes.LAUNCH_AVD, { name, options });
+  }, [postMessage]);
+
+  const stopAvd = useCallback((name: string, serial?: string) => {
+    return postMessage(MessageTypes.STOP_AVD, { name, serial });
+  }, [postMessage]);
+
+  const deleteAvd = useCallback((name: string) => {
+    return postMessage(MessageTypes.DELETE_AVD, { name });
+  }, [postMessage]);
+
+  const createAvd = useCallback((payload: CreateAvdPayload) => {
+    return postMessage(MessageTypes.CREATE_AVD, payload);
+  }, [postMessage]);
+
+  const fetchSystemImages = useCallback(() => {
+    return postMessage(MessageTypes.GET_SYSTEM_IMAGES);
+  }, [postMessage]);
+
+  const fetchPackages = useCallback(() => {
+    setIsRefreshingPackages(true);
+    return postMessage(MessageTypes.GET_PACKAGES);
+  }, [postMessage]);
+
+  const installPackages = useCallback((packages: string[]) => {
+    return postMessage(MessageTypes.INSTALL_PACKAGES, { packages });
+  }, [postMessage]);
+
   return {
     healthReport,
     settings,
     installProgress,
     selectedDirectory,
     availableJdks,
+    devices,
+    deviceDetails,
+    isRefreshingDevices,
+    avds,
+    systemImages,
+    packages,
+    isRefreshingPackages,
+    isRefreshingAvds,
     isLoading,
     postMessage,
     refreshHealthReport,
     fetchJdks,
+    fetchDevices,
+    fetchDeviceDetails,
+    selectApkFile,
+    installApk,
+    rebootDevice,
+    takeScreenshot,
+    openDeviceShell,
+    connectWireless,
+    enableTcpip,
+    fetchAvds,
+    launchAvd,
+    stopAvd,
+    deleteAvd,
+    createAvd,
+    fetchSystemImages,
+    fetchPackages,
+    installPackages,
     setJdkConfig,
     installManagedJdk,
     saveSettings,

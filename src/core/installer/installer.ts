@@ -33,10 +33,12 @@ export class Installer {
     this.isCancelled = false;
 
     const rootDir = path.resolve(payload.rootDir);
-    const sdkRoot = path.join(rootDir, 'sdk');
-    const downloadsDir = path.join(rootDir, 'downloads');
-    const configDir = path.join(rootDir, 'config');
-    const logsDir = path.join(rootDir, 'logs');
+    const isAlreadySdk = path.basename(rootDir).toLowerCase() === 'sdk';
+    const sdkRoot = isAlreadySdk ? rootDir : path.join(rootDir, 'sdk');
+    const baseDir = isAlreadySdk ? path.dirname(rootDir) : rootDir;
+    const downloadsDir = path.join(baseDir, 'downloads');
+    const configDir = path.join(baseDir, 'config');
+    const logsDir = path.join(baseDir, 'logs');
 
     // 1. Pre-flight Validation
     onProgress({

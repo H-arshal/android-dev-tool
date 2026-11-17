@@ -8,6 +8,7 @@ import { ComponentsPage } from './pages/Components';
 import { JDKManagerPage } from './pages/JDKManager';
 import { DiagnosticsPage } from './pages/Diagnostics';
 import { SettingsPage } from './pages/Settings';
+import { DeviceManager } from './pages/DeviceManager';
 
 declare global {
   interface Window {
@@ -26,9 +27,34 @@ export const App: React.FC = () => {
     installProgress,
     selectedDirectory,
     availableJdks,
+    devices,
+    deviceDetails,
+    isRefreshingDevices,
+    avds,
+    systemImages,
+    packages,
+    isRefreshingPackages,
+    isRefreshingAvds,
     isLoading,
     refreshHealthReport,
     fetchJdks,
+    fetchDevices,
+    fetchDeviceDetails,
+    selectApkFile,
+    installApk,
+    rebootDevice,
+    takeScreenshot,
+    openDeviceShell,
+    connectWireless,
+    enableTcpip,
+    fetchAvds,
+    launchAvd,
+    stopAvd,
+    deleteAvd,
+    createAvd,
+    fetchSystemImages,
+    fetchPackages,
+    installPackages,
     setJdkConfig,
     installManagedJdk,
     saveSettings,
@@ -62,6 +88,7 @@ export const App: React.FC = () => {
         onSelectTab={setActiveTab}
         status={status}
         issueCount={issueCount}
+        deviceCount={devices.length}
       />
 
       <main className="flex-1 overflow-y-auto">
@@ -81,11 +108,17 @@ export const App: React.FC = () => {
             onOpenDirectoryPicker={openDirectoryPicker}
             installProgress={installProgress}
             onStartInstall={(payload) => postMessage('START_INSTALLATION', payload)}
+            onNavigateToPackages={() => setActiveTab('components')}
           />
         )}
 
         {activeTab === 'components' && (
-          <ComponentsPage />
+          <ComponentsPage
+            packages={packages}
+            isRefreshing={isRefreshingPackages}
+            onRefresh={fetchPackages}
+            onInstallPackages={installPackages}
+          />
         )}
 
         {activeTab === 'jdk' && (
@@ -95,6 +128,33 @@ export const App: React.FC = () => {
             onSelectJdk={(customPath) => setJdkConfig('manual', customPath)}
             onInstallManagedJdk={() => installManagedJdk()}
             onRefreshJdks={fetchJdks}
+          />
+        )}
+
+        {activeTab === 'devices' && (
+          <DeviceManager
+            devices={devices}
+            deviceDetails={deviceDetails}
+            isRefreshing={isRefreshingDevices}
+            onRefreshDevices={fetchDevices}
+            onFetchDetails={fetchDeviceDetails}
+            onSelectApkFile={selectApkFile}
+            onInstallApk={installApk}
+            onReboot={rebootDevice}
+            onTakeScreenshot={takeScreenshot}
+            onOpenShell={openDeviceShell}
+            onConnectWireless={connectWireless}
+            onEnableTcpip={enableTcpip}
+            avds={avds}
+            systemImages={systemImages}
+            isRefreshingAvds={isRefreshingAvds}
+            onRefreshAvds={fetchAvds}
+            onLaunchAvd={launchAvd}
+            onStopAvd={stopAvd}
+            onDeleteAvd={deleteAvd}
+            onCreateAvd={createAvd}
+            onFetchSystemImages={fetchSystemImages}
+            onInstallPackages={installPackages}
           />
         )}
 

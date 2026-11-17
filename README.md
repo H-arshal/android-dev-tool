@@ -48,6 +48,17 @@ Setting up a functional Android development environment on Windows has tradition
 - Distinguishes between critical errors, configuration warnings, and informational notices.
 - Provides one-click "Fix Automatically" actions for common misconfigurations like missing PATH entries or pending licenses.
 
+### 5. Connected Device Manager and Hardware Inspector
+- **Real-Time ADB Discovery:** Automatically tracks connected USB devices, Wi-Fi targets, and active emulators.
+- **Hardware Telemetry:** Live battery level and temperature, physical and override screen density, available user data storage, and CPU architecture.
+- **Device Quick Actions:** One-click binary screenshot capture opened in VS Code, dedicated ADB interactive shell terminal, system / bootloader / recovery reboot controls, and Wi-Fi pairing.
+- **Sideload APK:** Direct APK installation with selectable flags (`-r`, `-g`, `-d`, `-t`) and actionable human-friendly error messages for common ADB failure codes.
+
+### 6. Android Virtual Device (AVD) and Emulator Hub
+- **AVD Orchestration:** Lists all local virtual devices with parsed hardware configs (`config.ini`), target API levels, and Google Play Store support.
+- **Execution Modes:** Launch emulators with support for normal boot, cold boot (`-no-snapshot-load`), headless execution (`-no-window`), or data wipe.
+- **AVD Creation and Deletion:** Create new virtual devices with installed system images and device profile presets directly within VS Code.
+
 ---
 
 ## System Architecture
@@ -211,17 +222,19 @@ Android Dev Tools verifies that your active `JAVA_HOME` satisfies these criteria
 
 ## Project Roadmap
 
-- **Phase 1: Environment Manager (Current Scope):**
+- **Phase 1: Environment Manager (Completed):**
   - SDK discovery and non-destructive detection.
   - Resumable streaming downloads and canonical extraction.
   - User-scope `ANDROID_HOME` and `PATH` configuration.
   - Managed OpenJDK 17 installation and validation.
   - Health checks and one-click auto-repair diagnostics.
-- **Phase 2: Device Manager (Upcoming):**
+- **Phase 2: Device Manager and Emulator Hub (Completed):**
   - Real-time ADB device detection and wireless ADB pairing.
-  - Android Virtual Device (AVD) emulator creation and lifecycle controls.
-  - APK drag-and-drop installation.
-- **Phase 3: Testing Studio (Future):**
+  - Live hardware telemetry (battery, display, storage, OS).
+  - High-res screenshot capture, interactive shell, and reboot controls.
+  - APK sideloading with actionable error decoding.
+  - Android Virtual Device (AVD) emulator orchestration and creation.
+- **Phase 3: Testing Studio (Upcoming):**
   - Embedded low-latency Android display mirroring inside VS Code.
   - Real-time Logcat stream filtering and crash monitoring.
   - Autonomous AI-agent testing integrations.

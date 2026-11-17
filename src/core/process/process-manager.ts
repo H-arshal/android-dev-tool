@@ -11,6 +11,7 @@ export interface ProcessOptions {
   env?: NodeJS.ProcessEnv;
   timeout?: number;
   shell?: boolean | string;
+  stdin?: string;
   onStdout?: (data: string) => void;
   onStderr?: (data: string) => void;
 }
@@ -77,6 +78,15 @@ export class ProcessManager {
           exitCode: -1
         });
         return;
+      }
+
+      if (options.stdin && proc.stdin) {
+        try {
+          proc.stdin.write(options.stdin);
+          proc.stdin.end();
+        } catch {
+          // Stdin pipe may be closed
+        }
       }
 
       timer = setTimeout(() => {

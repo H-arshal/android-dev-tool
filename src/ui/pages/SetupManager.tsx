@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { InstallationProfile, InstallProgress } from '../../shared/types';
-import { Folder, Check, ArrowRight, ArrowLeft, Download, ShieldCheck, HardDrive } from 'lucide-react';
+import { Folder, Check, ArrowRight, ArrowLeft, Download, ShieldCheck, HardDrive, CheckCircle2 } from 'lucide-react';
 
 interface SetupManagerProps {
   initialPath: string | null;
@@ -12,6 +12,7 @@ interface SetupManagerProps {
     profile: InstallationProfile;
     jdkChoice: 'detect' | 'managed' | 'manual';
   }) => void;
+  onNavigateToPackages?: () => void;
 }
 
 export const SetupManager: React.FC<SetupManagerProps> = ({
@@ -19,12 +20,25 @@ export const SetupManager: React.FC<SetupManagerProps> = ({
   selectedDirectory,
   onOpenDirectoryPicker,
   installProgress,
-  onStartInstall
+  onStartInstall,
+  onNavigateToPackages
 }) => {
   const [currentStep, setCurrentStep] = useState<number>(1);
   const [rootDir, setRootDir] = useState<string>(initialPath || 'C:\\Android_Tools');
   const [profile, setProfile] = useState<InstallationProfile>('physical-device');
   const [jdkChoice, setJdkChoice] = useState<'detect' | 'managed' | 'manual'>('detect');
+
+  const isCompleted = installProgress?.phase === 'completed' || installProgress?.percentage === 100;
+
+  // Automatically navigate to SDK Packages (components) tab 2 seconds after install completes
+  useEffect(() => {
+    if (isCompleted && onNavigateToPackages) {
+      const timer = setTimeout(() => {
+        onNavigateToPackages();
+      }, 2000);
+      return () => clearTimeout(timer);
+    }
+  }, [isCompleted, onNavigateToPackages]);
 
   useEffect(() => {
     if (selectedDirectory) {
@@ -259,25 +273,64 @@ export const SetupManager: React.FC<SetupManagerProps> = ({
         {/* Step 6: Install */}
         {currentStep === 6 && (
           <div className="space-y-4">
-            <h2 className="text-sm font-semibold flex items-center gap-2">
-              <Download className="w-4 h-4 animate-bounce text-vscode-button-bg" />
-              Installation in Progress
-            </h2>
-            <div className="space-y-2">
-              <div className="flex justify-between text-xs">
-                <span>{installProgress?.currentTask || 'Initializing installation tasks...'}</span>
-                <span>{installProgress?.percentage ? `${installProgress.percentage}%` : 'Working...'}</span>
+            {isCompleted ? (
+              <div className="p-4 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 space-y-3">
+                <div className="flex items-center space-x-3">
+                  <div className="w-9 h-9 rounded-full bg-emerald-500/20 flex items-center justify-center shrink-0">
+                    <CheckCircle2 className="w-5 h-5 text-emerald-400" />
+                  </div>
+                  <div>
+                    <h2 className="text-sm font-semibold text-emerald-300">
+                      Installation Completed Successfully!
+                    </h2>
+                    <p className="text-xs text-vscode-muted">
+                      Android command-line tools, platform tools, build tools, and environment variables are ready.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="w-full bg-vscode-border h-2 rounded overflow-hidden">
+                  <div className="bg-emerald-500 h-full w-full transition-all duration-300" />
+                </div>
+
+                <div className="flex items-center justify-between pt-2">
+                  <span className="text-xs text-vscode-muted italic">
+                    Redirecting to SDK Packages in 2 seconds...
+                  </span>
+                  {onNavigateToPackages && (
+                    <button
+                      onClick={onNavigateToPackages}
+                      className="px-4 py-1.5 rounded bg-vscode-button-bg text-vscode-button-fg hover:bg-vscode-button-hover text-xs font-semibold flex items-center gap-1.5 transition-colors shadow"
+                    >
+                      <span>Continue to SDK Packages</span>
+                      <ArrowRight className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                </div>
               </div>
-              <div className="w-full bg-vscode-border h-2 rounded overflow-hidden">
-                <div
-                  className="bg-vscode-button-bg h-full transition-all duration-300"
-                  style={{ width: `${installProgress?.percentage || 20}%` }}
-                />
-              </div>
-              <p className="text-[11px] text-vscode-muted italic">
-                {installProgress?.message || 'Validating drive space and preparing download pipeline.'}
-              </p>
-            </div>
+            ) : (
+              <>
+                <h2 className="text-sm font-semibold flex items-center gap-2">
+                  <Download className="w-4 h-4 animate-bounce text-vscode-button-bg" />
+                  Installation in Progress
+                </h2>
+                <div className="space-y-2">
+                  <div className="flex justify-between text-xs">
+                    <span>{installProgress?.currentTask || 'Initializing installation tasks...'}</span>
+                    <span>{installProgress?.percentage ? `${installProgress.percentage}%` : 'Working...'}</span>
+                  </div>
+                  <div className="w-full bg-vscode-border h-2 rounded overflow-hidden">
+                    <div
+                      className="bg-vscode-button-bg h-full transition-all duration-300"
+                      style={{ width: `${installProgress?.percentage || 20}%` }}
+                    />
+                  </div>
+                  <p className="text-[11px] text-vscode-muted italic">
+                    {installProgress?.message || 'Validating drive space and preparing download pipeline.'}
+                  </p>
+                </div>
+              </>
+            )}
           </div>
         )}
       </div>

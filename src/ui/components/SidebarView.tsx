@@ -33,8 +33,14 @@ export const SidebarView: React.FC<SidebarViewProps> = ({
       {/* Extension Header */}
       <div className="flex items-center justify-between pb-2 border-b border-vscode-border/50">
         <div className="flex items-center space-x-2">
-          <div className="w-6 h-6 rounded bg-vscode-button-bg text-vscode-button-fg flex items-center justify-center font-bold text-xs">
-            AD
+          <div className="w-6 h-6 rounded bg-slate-900 border border-emerald-500/40 text-emerald-400 flex items-center justify-center shrink-0">
+            <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M5 16a7 7 0 0 1 14 0Z" />
+              <circle cx="9" cy="12.5" r="0.75" fill="currentColor" stroke="none" />
+              <circle cx="15" cy="12.5" r="0.75" fill="currentColor" stroke="none" />
+              <line x1="7.5" y1="8" x2="6" y2="5.5" />
+              <line x1="16.5" y1="8" x2="18" y2="5.5" />
+            </svg>
           </div>
           <div>
             <h1 className="text-xs font-semibold tracking-wide">Android Dev Tools</h1>

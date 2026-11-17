@@ -27,5 +27,17 @@ describe('Installer', () => {
       (installer as any).validatePreflight(tempTestDir, 'physical-device')
     ).resolves.not.toThrow();
   });
+
+  it('determines proper sdkRoot without nesting when rootDir ends in sdk', () => {
+    const candidateA = path.join(tempTestDir, 'Android_Tools');
+    const isSdkA = path.basename(candidateA).toLowerCase() === 'sdk';
+    const sdkRootA = isSdkA ? candidateA : path.join(candidateA, 'sdk');
+    expect(sdkRootA).toBe(path.join(tempTestDir, 'Android_Tools', 'sdk'));
+
+    const candidateB = path.join(tempTestDir, 'Android_Tools', 'sdk');
+    const isSdkB = path.basename(candidateB).toLowerCase() === 'sdk';
+    const sdkRootB = isSdkB ? candidateB : path.join(candidateB, 'sdk');
+    expect(sdkRootB).toBe(path.join(tempTestDir, 'Android_Tools', 'sdk'));
+  });
 });
 
